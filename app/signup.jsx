@@ -1,10 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
+// import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -28,27 +26,27 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const pickAvatar = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "We need access to your photos to set a profile picture.",
-      );
-      return;
-    }
+  //   const pickAvatar = async () => {
+  //     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //     if (status !== "granted") {
+  //       Alert.alert(
+  //         "Permission needed",
+  //         "We need access to your photos to set a profile picture.",
+  //       );
+  //       return;
+  //     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+  //     const result = await ImagePicker.launchImageLibraryAsync({
+  //       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //       allowsEditing: true,
+  //       aspect: [1, 1],
+  //       quality: 0.8,
+  //     });
 
-    if (!result.canceled) {
-      setAvatar(result.assets[0].uri);
-    }
-  };
+  //     if (!result.canceled) {
+  //       setAvatar(result.assets[0].uri);
+  //     }
+  //   };
 
   const handleSignUp = () => {
     // TODO: wire up real account creation
@@ -112,7 +110,7 @@ export default function SignUpScreen() {
           {/* ---------- Cream sheet with the sign-up form ---------- */}
           <View className="flex-1 rounded-t-[32px] bg-[#FBF3E7] px-8 pt-8">
             {/* Profile picture picker */}
-            <View className="mb-7 items-center">
+            {/* <View className="mb-7 items-center">
               <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8}>
                 <View className="h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-[#1F3D2B]/25 bg-white">
                   {avatar ? (
@@ -130,7 +128,7 @@ export default function SignUpScreen() {
                   )}
                 </View>
 
-                {/* Edit badge */}
+              
                 <View className="absolute -bottom-1 -right-1 h-8 w-8 items-center justify-center rounded-full border-2 border-[#FBF3E7] bg-[#D9A441]">
                   <Ionicons name="add" size={18} color="#1F3D2B" />
                 </View>
@@ -139,7 +137,7 @@ export default function SignUpScreen() {
               <Text className="mt-3 text-xs font-semibold text-[#1F3D2B]/40">
                 {avatar ? "Looking good!" : "Add a profile picture (optional)"}
               </Text>
-            </View>
+            </View> */}
 
             {/* Name field */}
             <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#1F3D2B]/50">
