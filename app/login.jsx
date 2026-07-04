@@ -19,12 +19,22 @@ export default function LoginScreen() {
   const [loginMethod, setLoginMethod] = useState("email"); // "email" | "phone"
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  // const [password, setPassword] = useState("");
+  // const [showPassword, setShowPassword] = useState(false);
+
+  const isReady =
+    loginMethod === "email" ? email.trim().length > 0 : phone.trim().length > 0;
 
   const handleLogin = () => {
     // TODO: wire up real authentication
-    router.replace("/(tabs)");
+    // router.push({
+    //   pathname: "/otpscreen",
+    //   params: {
+    //     contact: loginMethod === "email" ? email : phone,
+    //     method: loginMethod,
+    //   },
+    // });
+    router.replace("/(tabs)/home");
   };
 
   return (
@@ -177,7 +187,7 @@ export default function LoginScreen() {
             )}
 
             {/* Password field */}
-            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-pine/50">
+            {/* <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-pine/50">
               Password
             </Text>
             <View className="mb-2 flex-row items-center rounded-xl border border-pine/15 bg-white px-4 py-3.5">
@@ -213,14 +223,18 @@ export default function LoginScreen() {
               <Text className="text-xs font-semibold text-clay">
                 Forgot password?
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* The signature element: a rotated, engraved dog tag as the submit button */}
             <TouchableOpacity
               onPress={handleLogin}
               activeOpacity={0.85}
               className="self-center"
-              style={{ transform: [{ rotate: "-2deg" }] }}
+              disabled={!isReady}
+              style={{
+                transform: [{ rotate: "-2deg" }],
+                opacity: isReady ? 1 : 0.4,
+              }}
             >
               <View className="relative w-[280px] rounded-2xl bg-mustard px-6 py-5 shadow-lg">
                 <View className="absolute -top-3 left-6 h-6 w-6 items-center justify-center rounded-full border-2 border-pine bg-cream">
