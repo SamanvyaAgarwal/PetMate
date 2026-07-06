@@ -1,4 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Alert } from "react-native";
+import { sendSignupOTP } from "../src/authApi";
 // import { Image } from "expo-image";
 // import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -54,15 +56,35 @@ export default function SignUpScreen() {
       ? email.trim().length > 0
       : phone.trim().length > 0) && name.trim().length > 0;
 
-  const handleSignUp = () => {
-    // TODO: run real validation / account creation here first
-    router.push({
-      pathname: "/otpscreen",
-      params: {
-        contact: signupMethod === "email" ? email : phone,
-        method: signupMethod,
-      },
-    });
+  const handleSignUp = async () => {
+
+    try {
+
+      const response = await sendSignupOTP({
+        name,
+        email,
+      });
+
+      Alert.alert("Success", response.data.message);
+
+      router.push({
+        pathname: "/otpscreen",
+        params: {
+          contact: email,
+          method: "email",
+          type: "signup",
+        },
+      });
+
+    } catch (error) {
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "Something went wrong"
+      );
+
+    }
+
   };
 
   return (
