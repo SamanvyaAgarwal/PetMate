@@ -1,6 +1,15 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
+
+import {
+  verifySignupOTP,
+  verifyLoginOTP,
+  sendSignupOTP,
+  sendLoginOTP,
+} from "../src/authApi";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,7 +30,7 @@ export default function OtpScreen() {
   const {
     contact = "",
     method = "email",
-    purpose = "signup",
+    type = "signup",
   } = useLocalSearchParams();
 
   const [digits, setDigits] = useState(Array(CODE_LENGTH).fill(""));
@@ -53,21 +62,88 @@ export default function OtpScreen() {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
+
     if (secondsLeft > 0) return;
-    // TODO: trigger real OTP resend
-    setSecondsLeft(RESEND_SECONDS);
-    setDigits(Array(CODE_LENGTH).fill(""));
-    inputRefs.current[0]?.focus();
+
+    try {
+
+      if (type === "signup") {
+
+        await sendSignupOTP({
+          name: "",
+          email: contact
+        });
+
+      } else {
+
+        await sendLoginOTP({
+          email: contact
+        });
+
+      }
+
+      setSecondsLeft(30);
+
+      setDigits(Array(6).fill(""));
+
+      inputRefs.current[0]?.focus();
+
+      Alert.alert("Success", "OTP Sent Again");
+
+    } catch (error) {
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "Failed to resend OTP"
+      );
+
+    }
+
   };
 
-  const handleVerify = () => {
-    // TODO: verify code with backend
-    if (purpose === "reset") {
-      router.replace("/reset-password");
-      return;
+  const handleVerify = async () => {
+
+    try {
+
+      const otp = digits.join("");
+
+      let response;
+
+      if (type === "signup") {
+
+        response = await verifySignupOTP({
+          email: contact,
+          otp,
+        });
+
+      } else {
+
+        response = await verifyLoginOTP({
+          email: contact,
+          otp,
+        });
+
+      }
+
+      const { token, user } = response.data;
+
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+
+      Alert.alert("Success", response.data.message);
+
+      router.replace("/(tabs)");
+
+    } catch (error) {
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "Something went wrong"
+      );
+
     }
-    router.replace("/(tabs)");
+
   };
 
   const isComplete = digits.every((d) => d !== "");
