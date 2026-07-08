@@ -98,7 +98,7 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
       {/* ---------- Top bar ---------- */}
       <SafeAreaView
         edges={["top"]}
-        className="border-b border-pine/10 bg-cream"
+        className="border-b border-pine/10 bg-cream dark:border-cream/10 dark:bg-pine"
       >
         <View className="flex-row items-center justify-between px-4 py-2">
           <View className="flex-row items-center gap-2.5">
@@ -107,17 +107,22 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
               activeOpacity={0.7}
               className="h-9 w-9 items-center justify-center rounded-full"
             >
-              <Ionicons name="menu-outline" size={24} color="#1F3D2B" />
+              <Ionicons
+                name="menu-outline"
+                size={24}
+                color={isDark ? "#FBF3E7" : "#1F3D2B"}
+              />
             </TouchableOpacity>
 
-            <Text className="text-lg font-extrabold tracking-wide text-pine">
+            <Text className="text-lg font-extrabold tracking-wide text-pine dark:text-cream">
               PawTrail
             </Text>
           </View>
 
           <TouchableOpacity
             activeOpacity={0.7}
-            className="flex-row items-center gap-2 rounded-full border border-pine/10 bg-white py-1 pl-1 pr-3"
+            onPress={() => router.push("/profile")}
+            className="flex-row items-center gap-2 rounded-full border border-pine/10 bg-white py-1 pl-1 pr-3 dark:border-cream/10 dark:bg-pine"
           >
             {avatarUri ? (
               <Image
@@ -131,7 +136,7 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
             )}
 
             <Text
-              className="max-w-[100px] text-sm font-semibold text-pine"
+              className="max-w-[100px] text-sm font-semibold text-pine dark:text-cream"
               numberOfLines={1}
             >
               {userName}
@@ -163,31 +168,39 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
               height: "100%",
               transform: [{ translateX }],
             }}
-            className="bg-pine"
+            className="bg-pine dark:bg-ink"
           >
             <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
               {/* Profile block */}
               <View className="px-6 pb-5 pt-4">
                 <View className="flex-row items-center gap-3">
-                  {avatarUri ? (
-                    <Image
-                      source={{ uri: avatarUri }}
-                      style={{ width: 52, height: 52, borderRadius: 26 }}
-                    />
-                  ) : (
-                    <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-mustard">
-                      <Ionicons name="paw" size={22} color="#FBF3E7" />
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => handleNavigate("/profile")}
+                    className="flex-row items-center gap-3"
+                  >
+                    {avatarUri ? (
+                      <Image
+                        source={{ uri: avatarUri }}
+                        style={{ width: 52, height: 52, borderRadius: 26 }}
+                      />
+                    ) : (
+                      <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-mustard">
+                        <Ionicons name="paw" size={22} color="#FBF3E7" />
+                      </View>
+                    )}
+                    <View className="flex-1">
+                      <Text
+                        className="text-base font-bold text-cream"
+                        numberOfLines={1}
+                      >
+                        {userName}
+                      </Text>
+                      <Text className="text-xs text-cream/50">
+                        View profile
+                      </Text>
                     </View>
-                  )}
-                  <View className="flex-1">
-                    <Text
-                      className="text-base font-bold text-cream"
-                      numberOfLines={1}
-                    >
-                      {userName}
-                    </Text>
-                    <Text className="text-xs text-cream/50">View profile</Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Light / dark toggle */}

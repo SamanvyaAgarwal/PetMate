@@ -34,7 +34,7 @@ export default function LoginScreen() {
     //     method: loginMethod,
     //   },
     // });
-    router.replace("/(tabs)/home");
+    router.replace("/home");
   };
 
   return (
