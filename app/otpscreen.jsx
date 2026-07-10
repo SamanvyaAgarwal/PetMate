@@ -126,20 +126,29 @@ export default function OtpScreen() {
 
       }
 
-      const { token, user } = response.data;
+      const { token, user, is_profile_completed } = response.data.data;
 
       await AsyncStorage.setItem("token", token);
       await AsyncStorage.setItem("user", JSON.stringify(user));
 
       Alert.alert("Success", response.data.message);
 
-      router.replace("/(tabs)");
-
+      if (is_profile_completed) {
+        router.replace("/home");
+      } else {
+        router.replace("/complete-profile");
+      }
     } catch (error) {
+
+      console.log("FULL ERROR:", error);
+
+      console.log("Response:", error?.response?.data);
+
+      console.log("Status:", error?.response?.status);
 
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong"
+        JSON.stringify(error?.response?.data || error.message)
       );
 
     }
