@@ -31,10 +31,12 @@ export default function OtpScreen() {
     contact = "",
     method = "email",
     type = "signup",
+    name = "",
   } = useLocalSearchParams();
 
   const [digits, setDigits] = useState(Array(CODE_LENGTH).fill(""));
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [loading, setLoading] = useState(false);
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function OtpScreen() {
       if (type === "signup") {
 
         await sendSignupOTP({
-          name: "",
+          name,
           email: contact
         });
 
@@ -103,56 +105,92 @@ export default function OtpScreen() {
   };
 
   const handleVerify = async () => {
+   
 
+    if (loading) return;
+
+    setLoading(true);
     try {
 
       const otp = digits.join("");
+
+      if (otp.length !== 6) {
+        return Alert.alert("Error", "Please enter a valid OTP");
+      }
 
       let response;
 
       if (type === "signup") {
 
-        response = await verifySignupOTP({
+        console.log("Sending:", {
           email: contact,
           otp,
         });
 
+        response = await verifySignupOTP({
+          email: contact,
+          otp,
+        });
+        console.log("FULL RESPONSE:");
+        console.log(JSON.stringify(response?.data, null, 2));
+
       } else {
+
+        console.log("Sending:", {
+          email: contact,
+          otp,
+        });
 
         response = await verifyLoginOTP({
           email: contact,
           otp,
         });
-
+        console.log("FULL RESPONSE:");
+        console.log(JSON.stringify(response?.data, null, 2));
+        console.log("DATA:", response?.data?.data);
       }
 
-      const { token, user, is_profile_completed } = response.data.data;
 
-      await AsyncStorage.setItem("token", token);
-      await AsyncStorage.setItem("user", JSON.stringify(user));
+      const {
+        token,
+        user,
+        is_profile_completed = false,
+      } = response.data?.data ?? {};
+      console.log("Token:", token);
+      console.log("User:", user);
+      console.log("Profile Completed:", is_profile_completed);
 
+      await AsyncStorage.setItem("token", token ?? "");
+      await AsyncStorage.setItem("user", JSON.stringify(user ?? {}));
+      await AsyncStorage.setItem(
+        "is_profile_completed",
+        JSON.stringify(is_profile_completed)
+      );
       Alert.alert("Success", response.data.message);
-
+         
+      
       if (is_profile_completed) {
         router.replace("/home");
       } else {
-        router.replace("/complete-profile");
+        router.replace("/profile");
       }
+      
     } catch (error) {
 
-      console.log("FULL ERROR:", error);
-
-      console.log("Response:", error?.response?.data);
-
+      console.log("===== SIGNUP VERIFY ERROR =====");
+      console.log("Message:", error.message);
       console.log("Status:", error?.response?.status);
+      console.log("Response:", error?.response?.data);
+      console.log("===============================");
 
       Alert.alert(
         "Error",
-        JSON.stringify(error?.response?.data || error.message)
+        error?.response?.data?.message || error.message
       );
 
+    } finally {
+      setLoading(false);
     }
-
   };
 
   const isComplete = digits.every((d) => d !== "");
@@ -275,7 +313,7 @@ export default function OtpScreen() {
             <TouchableOpacity
               onPress={handleVerify}
               activeOpacity={0.85}
-              disabled={!isComplete}
+              disabled={!isComplete || loading}
               className="self-center"
               style={{
                 transform: [{ rotate: "-2deg" }],
@@ -293,7 +331,7 @@ export default function OtpScreen() {
                       VERIFIED TAG
                     </Text>
                     <Text className="mt-0.5 text-lg font-extrabold text-pine">
-                      Verify
+                      {loading ? "Verifying..." : "Verify"}
                     </Text>
                   </View>
                   <Ionicons

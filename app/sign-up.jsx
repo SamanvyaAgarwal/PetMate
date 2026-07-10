@@ -5,6 +5,7 @@ import { sendSignupOTP } from "../src/authApi";
 // import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
+
 import {
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +25,7 @@ export default function SignUpScreen() {
   // const [avatar, setAvatar] = useState(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState("");
   // const [password, setPassword] = useState("");
   // const [confirmPassword, setConfirmPassword] = useState("");
@@ -58,11 +60,23 @@ export default function SignUpScreen() {
 
   const handleSignUp = async () => {
 
+    if (loading) return;
+
     try {
 
+      setLoading(true);
+
+      if (!name.trim()) {
+        return Alert.alert("Error", "Please enter your name");
+      }
+
+      if (signupMethod === "email" && !email.trim()) {
+        return Alert.alert("Error", "Please enter your email");
+      }
+
       const response = await sendSignupOTP({
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
       });
 
       Alert.alert("Success", response.data.message);
@@ -70,7 +84,8 @@ export default function SignUpScreen() {
       router.push({
         pathname: "/otpscreen",
         params: {
-          contact: email,
+          name: name.trim(),
+          contact: email.trim().toLowerCase(),
           method: "email",
           type: "signup",
         },
@@ -83,8 +98,11 @@ export default function SignUpScreen() {
         error?.response?.data?.message || "Something went wrong"
       );
 
-    }
+    } finally {
 
+      setLoading(false);
+
+    }
   };
 
   return (
@@ -342,7 +360,7 @@ export default function SignUpScreen() {
               onPress={handleSignUp}
               activeOpacity={0.85}
               className="self-center"
-              disabled={!isReady}
+              disabled={!isReady || loading}
               style={{
                 transform: [{ rotate: "-2deg" }],
                 opacity: isReady ? 1 : 0.4,
@@ -359,7 +377,7 @@ export default function SignUpScreen() {
                       NEW TAG
                     </Text>
                     <Text className="mt-0.5 text-lg font-extrabold text-pine">
-                      Create Account
+                      {loading ? "Sending OTP..." : "Create Account"}
                     </Text>
                   </View>
                   <Ionicons

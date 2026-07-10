@@ -7,8 +7,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const MOCK_USER = {
-  firstName: "sam",
-  lastName: "gdhdh",
+  fullName: "Sam Gdhdh",
   avatarUri: null,
 };
 
@@ -75,7 +74,7 @@ export default function ProfileScreen() {
           </View>
 
           <Text className="mt-[18px] text-[22px] font-bold text-pine dark:text-cream">
-            {user.firstName} {user.lastName}
+            {user.fullName}
           </Text>
         </View>
 
@@ -88,15 +87,8 @@ export default function ProfileScreen() {
           <View className="overflow-hidden rounded-[18px] bg-cream shadow-sm dark:bg-pine">
             <InfoRow
               icon="person-outline"
-              label="First Name"
-              value={user.firstName}
-              isDark={isDark}
-            />
-            <View className="ml-16 h-px bg-fog-200 dark:bg-cream/10" />
-            <InfoRow
-              icon="person-outline"
-              label="Last Name"
-              value={user.lastName}
+              label="Full Name"
+              value={user.fullName}
               isDark={isDark}
             />
           </View>
