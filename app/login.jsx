@@ -1,8 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert } from "react-native";
-import { sendLoginOTP } from "../src/authApi";
 
 import {
   KeyboardAvoidingView,
@@ -29,27 +27,28 @@ export default function LoginScreen() {
     loginMethod === "email" ? email.trim().length > 0 : phone.trim().length > 0;
 
   const handleLogin = async () => {
-    try {
-      const response = await sendLoginOTP({
-        email,
-      });
+    // try {
+    //   const response = await sendLoginOTP({
+    //     email,
+    //   });
 
-      Alert.alert("Success", response.data.message);
+    //   Alert.alert("Success", response.data.message);
 
-      router.push({
-        pathname: "/otpscreen",
-        params: {
-          contact: email,
-          method: "email",
-          type: "login",
-        },
-      });
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message || "Something went wrong",
-      );
-    }
+    //   router.push({
+    //     pathname: "/otpscreen",
+    //     params: {
+    //       contact: email,
+    //       method: "email",
+    //       type: "login",
+    //     },
+    //   });
+    // } catch (error) {
+    //   Alert.alert(
+    //     "Error",
+    //     error?.response?.data?.message || "Something went wrong",
+    //   );
+    // }
+    router.push("/home");
   };
 
   return (

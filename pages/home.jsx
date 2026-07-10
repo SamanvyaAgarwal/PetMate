@@ -4,7 +4,9 @@ import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Dimensions,
+  Easing,
   FlatList,
   Modal,
   Pressable,
@@ -14,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Circle, Path } from "react-native-svg";
 
 import Header from "@/components/header";
 
@@ -75,6 +78,216 @@ const CATEGORIES = [
 // echoing a multi-color card style without needing custom illustrations
 const CATEGORY_TINTS = ["bg-mustard/20", "bg-clay/15", "bg-pine/10"];
 
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+function PetLoveSection({ isDark }) {
+  const bounce = useRef(new Animated.Value(0)).current;
+  const tailWag = useRef(new Animated.Value(0)).current;
+  const paw1 = useRef(new Animated.Value(0)).current;
+  const paw2 = useRef(new Animated.Value(0)).current;
+  const paw3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Illustration gently hops, like a happy little bounce
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounce, {
+          toValue: -14,
+          duration: 700,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounce, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Tail wags continuously, independent of the bounce
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(tailWag, {
+          toValue: 1,
+          duration: 240,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(tailWag, {
+          toValue: -1,
+          duration: 240,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Trailing paw prints rise + fade, staggered
+    const makePawLoop = (anim, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+    makePawLoop(paw1, 0).start();
+    makePawLoop(paw2, 550).start();
+    makePawLoop(paw3, 1100).start();
+  }, []);
+
+  const tailRotate = tailWag.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-22deg", "22deg"],
+  });
+
+  const pawStyle = (anim) => ({
+    opacity: anim.interpolate({
+      inputRange: [0, 0.2, 0.8, 1],
+      outputRange: [0, 1, 1, 0],
+    }),
+    transform: [
+      {
+        translateY: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [14, -8],
+        }),
+      },
+      {
+        scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }),
+      },
+    ],
+  });
+
+  const lineColor = "#FBF3E7";
+
+  return (
+    <View
+      style={{ height: SCREEN_HEIGHT * 0.55 }}
+      className="mx-3 mt-6 overflow-hidden rounded-3xl bg-pine dark:bg-ink"
+    >
+      {/* Decorative soft blobs */}
+      <View className="absolute -left-10 -top-10 h-44 w-44 rounded-full bg-mustard/10" />
+      <View className="absolute -bottom-12 -right-8 h-56 w-56 rounded-full bg-cream/5" />
+      <View className="absolute right-6 top-8 h-16 w-16 rounded-full bg-clay/10" />
+
+      <View className="flex-1 items-center justify-center px-6">
+        {/* Headline */}
+        <Text className="text-center text-2xl font-extrabold leading-8 text-cream">
+          Made by people who{"\n"}love their pets{"\n"}as much as you do
+        </Text>
+
+        {/* Floating paw prints trailing behind the illustration */}
+        <View className="mt-5 flex-row items-end gap-8">
+          <Animated.View style={pawStyle(paw1)}>
+            <Ionicons name="paw" size={16} color="#D9A44177" />
+          </Animated.View>
+          <Animated.View style={pawStyle(paw2)}>
+            <Ionicons name="paw" size={20} color="#D9A441AA" />
+          </Animated.View>
+          <Animated.View style={pawStyle(paw3)}>
+            <Ionicons name="paw" size={16} color="#D9A44177" />
+          </Animated.View>
+        </View>
+
+        {/* Bouncing original line-art hug illustration */}
+        <Animated.View
+          style={{ transform: [{ translateY: bounce }] }}
+          className="mt-3"
+        >
+          <Svg width={190} height={200} viewBox="0 0 150 170">
+            {/* Person body */}
+            <Path
+              d="M55 170 L55 120 Q55 95 80 95 Q105 95 105 120 L105 170"
+              fill={lineColor}
+              opacity={0.95}
+            />
+            {/* Person head */}
+            <Circle
+              cx="82"
+              cy="72"
+              r="22"
+              fill="none"
+              stroke={lineColor}
+              strokeWidth={3}
+            />
+
+            {/* Dog body leaning into the hug */}
+            <Path
+              d="M20 168 Q15 120 35 90 Q45 70 70 75 Q85 80 82 100 Q80 120 60 130 Q45 138 40 168 Z"
+              fill="none"
+              stroke={lineColor}
+              strokeWidth={3}
+            />
+            {/* Dog ear */}
+            <Path d="M35 88 Q22 78 26 60 Q40 65 46 82 Z" fill={lineColor} />
+            {/* Dog closed happy eye */}
+            <Path
+              d="M50 92 Q54 96 58 92"
+              fill="none"
+              stroke={lineColor}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+            />
+            {/* Dog nose */}
+            <Circle cx="38" cy="103" r="4" fill={lineColor} />
+
+            {/* Wagging tail */}
+            <AnimatedPath
+              d="M22 130 Q8 120 6 100"
+              fill="none"
+              stroke={lineColor}
+              strokeWidth={4}
+              strokeLinecap="round"
+              style={{
+                transform: [
+                  { translateX: 22 },
+                  { translateY: 130 },
+                  { rotate: tailRotate },
+                  { translateX: -22 },
+                  { translateY: -130 },
+                ],
+              }}
+            />
+
+            {/* Arms wrapping around the dog */}
+            <Path
+              d="M60 130 Q75 140 95 132"
+              fill="none"
+              stroke="#1F3D2B"
+              strokeWidth={4}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </Animated.View>
+
+        {/* CTA */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          className="mt-6 rounded-full bg-mustard px-7 py-3.5"
+        >
+          <Text className="text-xs font-extrabold uppercase tracking-wide text-pine">
+            Explore More
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const [pets, setPets] = useState(MOCK_PETS);
   const [banners, setBanners] = useState(MOCK_BANNERS);
@@ -120,6 +333,10 @@ export default function HomeScreen() {
   };
 
   const handleCategoryPress = (category) => {
+    if (category.key === "ngo") {
+      router.push("/nearby-ngos");
+      return;
+    }
     setSelectedCategory(category);
   };
 
@@ -310,6 +527,8 @@ export default function HomeScreen() {
             })}
           </View>
         </View>
+        {/* ---------- Original animated pet-love illustration ---------- */}
+        <PetLoveSection isDark={isDark} />
       </ScrollView>
 
       {/* ---------- Select-pet modal ---------- */}
