@@ -6,15 +6,42 @@ import { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// TODO: replace with real logged-in user data — GET /me
+// Shape mirrors the `users` table columns
 const MOCK_USER = {
-  fullName: "Sam Gdhdh",
-  avatarUri: null,
+  name: "Sam Gdhdh",
+  login_method: "phone", // enum('email','phone')
+  email: "",
+  phone: "9181074472",
+  profile_image: null,
+  address: "",
+  city: "",
+  state: "",
+  district: "",
+  country: "",
+  pincode: "",
 };
 
 export default function ProfileScreen() {
   const [user] = useState(MOCK_USER);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const iconColor = isDark ? "#FBF3E7" : "#1F3D2B";
+
+  const isPhoneUser = user.login_method === "phone";
+  const contactLabel = isPhoneUser ? "Phone Number" : "Email";
+  const contactValue = isPhoneUser ? user.phone : user.email;
+  const contactIcon = isPhoneUser ? "call-outline" : "mail-outline";
+
+  // All address fields always shown — empty ones display a placeholder dash
+  const addressFields = [
+    { icon: "home-outline", label: "Address", value: user.address },
+    { icon: "business-outline", label: "City", value: user.city },
+    { icon: "map-outline", label: "State", value: user.state },
+    { icon: "location-outline", label: "District", value: user.district },
+    { icon: "earth-outline", label: "Country", value: user.country },
+    { icon: "mail-open-outline", label: "Pincode", value: user.pincode },
+  ];
 
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-pine" edges={["top"]}>
@@ -26,11 +53,7 @@ export default function ProfileScreen() {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           className="absolute left-3 z-10 h-9 w-9 items-center justify-center"
         >
-          <Ionicons
-            name="chevron-back"
-            size={26}
-            color={isDark ? "#FBF3E7" : "#1F3D2B"}
-          />
+          <Ionicons name="chevron-back" size={26} color={iconColor} />
         </TouchableOpacity>
         <Text className="text-[17px] font-semibold text-pine dark:text-cream">
           My Profile
@@ -47,9 +70,9 @@ export default function ProfileScreen() {
           <View className="relative">
             <View className="h-32 w-32 items-center justify-center rounded-full bg-cream p-2 dark:bg-ink">
               <View className="h-full w-full items-center justify-center rounded-full bg-fog-100 dark:bg-pine">
-                {user.avatarUri ? (
+                {user.profile_image ? (
                   <Image
-                    source={{ uri: user.avatarUri }}
+                    source={{ uri: user.profile_image }}
                     style={{ width: 108, height: 108, borderRadius: 54 }}
                   />
                 ) : (
@@ -64,9 +87,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => {
-                router.push("edit-page");
-              }}
+              onPress={() => router.push("/edit-page")}
               className="absolute -right-1.5 -top-1.5 h-10 w-10 items-center justify-center rounded-full bg-mustard shadow-sm"
             >
               <Ionicons name="create-outline" size={18} color="#1F3D2B" />
@@ -74,7 +95,7 @@ export default function ProfileScreen() {
           </View>
 
           <Text className="mt-[18px] text-[22px] font-bold text-pine dark:text-cream">
-            {user.fullName}
+            {user.name}
           </Text>
         </View>
 
@@ -88,14 +109,41 @@ export default function ProfileScreen() {
             <InfoRow
               icon="person-outline"
               label="Full Name"
-              value={user.fullName}
-              isDark={isDark}
+              value={user.name}
+            />
+            <View className="ml-16 h-px bg-fog-200 dark:bg-cream/10" />
+            <InfoRow
+              icon={contactIcon}
+              label={contactLabel}
+              value={contactValue}
             />
           </View>
         </View>
 
+        {/* Address — always rendered, empty fields show a dash */}
+        <View className="mt-6 px-5">
+          <Text className="mb-2 ml-1 text-[13px] font-bold tracking-wide text-ink/50 dark:text-cream/50">
+            ADDRESS
+          </Text>
+
+          <View className="overflow-hidden rounded-[18px] bg-cream shadow-sm dark:bg-pine">
+            {addressFields.map((field, index) => (
+              <View key={field.label}>
+                <InfoRow
+                  icon={field.icon}
+                  label={field.label}
+                  value={field.value}
+                />
+                {index !== addressFields.length - 1 && (
+                  <View className="ml-16 h-px bg-fog-200 dark:bg-cream/10" />
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* My Pets */}
-        <View className="mt-2 px-5">
+        <View className="mt-6 px-5">
           <Text className="mb-2 ml-1 text-[13px] font-bold tracking-wide text-ink/50 dark:text-cream/50">
             MY PETS
           </Text>
@@ -134,7 +182,10 @@ export default function ProfileScreen() {
   );
 }
 
-function InfoRow({ icon, label, value, isDark }) {
+function InfoRow({ icon, label, value }) {
+  const displayValue = value && value.trim() !== "" ? value : "—";
+  const isEmpty = displayValue === "—";
+
   return (
     <View className="flex-row items-center gap-3 px-4 py-3.5">
       <View className="h-10 w-10 items-center justify-center rounded-xl bg-mustard/15">
@@ -144,8 +195,14 @@ function InfoRow({ icon, label, value, isDark }) {
         <Text className="text-[13px] text-ink/50 dark:text-cream/50">
           {label}
         </Text>
-        <Text className="mt-0.5 text-base font-semibold text-pine dark:text-cream">
-          {value}
+        <Text
+          className={`mt-0.5 text-base font-semibold ${
+            isEmpty
+              ? "text-pine/30 dark:text-cream/30"
+              : "text-pine dark:text-cream"
+          }`}
+        >
+          {displayValue}
         </Text>
       </View>
     </View>

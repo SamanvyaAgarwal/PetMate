@@ -1,10 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { sendLoginOTP } from "../src/authApi";
 
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -29,32 +27,33 @@ export default function LoginScreen() {
     loginMethod === "email" ? email.trim().length > 0 : phone.trim().length > 0;
 
   const handleLogin = async () => {
-    try {
-      if (!email.trim()) {
-        return Alert.alert("Error", "Please enter your email");
-      }
+    // try {
+    //   if (!email.trim()) {
+    //     return Alert.alert("Error", "Please enter your email");
+    //   }
 
-      const response = await sendLoginOTP({
-        email: email.trim().toLowerCase(),
-      });
+    //   const response = await sendLoginOTP({
+    //     email: email.trim().toLowerCase(),
+    //   });
 
-      Alert.alert("Success", response.data.message);
+    //   Alert.alert("Success", response.data.message);
 
-      router.push({
-        pathname: "/otpscreen",
-        params: {
-          contact: email.trim().toLowerCase(),
-          method: "email",
-          type: "login",
-        },
-      });
-    } catch (error) {
-      console.log("Login error:", error);
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message || error?.message || "Something went wrong",
-      );
-    }
+    //   router.push({
+    //     pathname: "/otpscreen",
+    //     params: {
+    //       contact: email.trim().toLowerCase(),
+    //       method: "email",
+    //       type: "login",
+    //     },
+    //   });
+    // } catch (error) {
+    //   console.log("Login error:", error);
+    //   Alert.alert(
+    //     "Error",
+    //     error?.response?.data?.message || error?.message || "Something went wrong",
+    //   );
+    // }
+    router.push("/home");
   };
 
   return (
