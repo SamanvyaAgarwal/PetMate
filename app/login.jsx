@@ -49,9 +49,10 @@ export default function LoginScreen() {
         },
       });
     } catch (error) {
+      console.log("Login error:", error);
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong",
+        error?.response?.data?.message || error?.message || "Something went wrong",
       );
     }
   };

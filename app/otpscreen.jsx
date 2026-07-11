@@ -151,11 +151,13 @@ export default function OtpScreen() {
       }
 
 
+      const responseData = response?.data ?? {};
+      const payload = responseData?.data ?? {};
       const {
         token,
         user,
         is_profile_completed = false,
-      } = response.data?.data ?? {};
+      } = payload;
       console.log("Token:", token);
       console.log("User:", user);
       console.log("Profile Completed:", is_profile_completed);
@@ -166,7 +168,7 @@ export default function OtpScreen() {
         "is_profile_completed",
         JSON.stringify(is_profile_completed)
       );
-      Alert.alert("Success", response.data.message);
+      Alert.alert("Success", responseData?.message || "Authenticated successfully");
          
       
       if (is_profile_completed) {
