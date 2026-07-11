@@ -18,6 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="service-listing" options={{ headerShown: false }} />
         <Stack.Screen name="nearby-ngos" options={{ headerShown: false }} />
         <Stack.Screen name="booking" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-page" options={{ headerShown: false }} />
         <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}

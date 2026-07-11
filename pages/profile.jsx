@@ -65,7 +65,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => {
-                // TODO: navigate to edit profile screen
+                router.push("edit-page");
               }}
               className="absolute -right-1.5 -top-1.5 h-10 w-10 items-center justify-center rounded-full bg-mustard shadow-sm"
             >

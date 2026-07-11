@@ -51,7 +51,7 @@ export default function LoginScreen() {
     } catch (error) {
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong"
+        error?.response?.data?.message || "Something went wrong",
       );
     }
   };

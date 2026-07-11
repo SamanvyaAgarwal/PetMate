@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const DRAWER_WIDTH = 300;
 
 const MENU_ITEMS = [
-  { key: "home", label: "Home", icon: "home-outline", route: "/(tabs)" },
+  { key: "home", label: "Home", icon: "home-outline", route: "/home" },
   {
     key: "profile",
     label: "Profile",
