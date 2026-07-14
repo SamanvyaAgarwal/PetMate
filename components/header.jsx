@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getProfile } from "@/src/authApi";
 
 const DRAWER_WIDTH = 300;
 
@@ -56,6 +57,7 @@ const MENU_ITEMS = [
 
 export default function Header({ userName = "Alex Rivera", avatarUri }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
@@ -92,6 +94,21 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
     // TODO: clear auth/session state here before redirecting
     router.replace("/login");
   };
+  const loadProfile = async () => {
+    try {
+      const response = await getProfile();
+
+      console.log(response.data);
+
+      setUser(response.data.data.user);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   return (
     <>
@@ -139,7 +156,7 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
               className="max-w-[100px] text-sm font-semibold text-pine dark:text-cream"
               numberOfLines={1}
             >
-              {userName}
+              {user?.name || userName}
             </Text>
           </TouchableOpacity>
         </View>

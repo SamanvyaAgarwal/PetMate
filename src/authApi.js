@@ -15,3 +15,11 @@ export const sendLoginOTP = (data) => {
 export const verifyLoginOTP = (data) => {
     return api.post("/auth/verify-login-otp", data);
 };
+
+export const getProfile = () => {
+    return api.get("/user/profile");
+};
+
+export const completeProfile = (data) => {
+    return api.post("/user/complete-profile", data);
+};

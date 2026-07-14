@@ -5,6 +5,8 @@ import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect } from "react";
+import { getProfile } from "../src/authApi";
 
 // TODO: replace with real logged-in user data — GET /me
 // Shape mirrors the `users` table columns
@@ -23,32 +25,54 @@ const MOCK_USER = {
 };
 
 export default function ProfileScreen() {
-  const [user] = useState(MOCK_USER);
+  const [user, setUser] = useState(null);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const iconColor = isDark ? "#FBF3E7" : "#1F3D2B";
+  const safeUser = user ?? {};
 
-  const isPhoneUser = user.login_method === "phone";
+  const isPhoneUser = safeUser.login_method === "phone";
   const contactLabel = isPhoneUser ? "Phone Number" : "Email";
-  const contactValue = isPhoneUser ? user.phone : user.email;
+  const contactValue = isPhoneUser ? safeUser.phone : safeUser.email;
   const contactIcon = isPhoneUser ? "call-outline" : "mail-outline";
 
   // All address fields always shown — empty ones display a placeholder dash
   const addressFields = [
-    { icon: "home-outline", label: "Address", value: user.address },
-    { icon: "business-outline", label: "City", value: user.city },
-    { icon: "map-outline", label: "State", value: user.state },
-    { icon: "location-outline", label: "District", value: user.district },
-    { icon: "earth-outline", label: "Country", value: user.country },
-    { icon: "mail-open-outline", label: "Pincode", value: user.pincode },
+    { icon: "home-outline", label: "Address", value: safeUser.address },
+    { icon: "business-outline", label: "City", value: safeUser.city },
+    { icon: "map-outline", label: "State", value: safeUser.state },
+    { icon: "location-outline", label: "District", value: safeUser.district },
+    { icon: "earth-outline", label: "Country", value: safeUser.country },
+    { icon: "mail-open-outline", label: "Pincode", value: safeUser.pincode },
   ];
+
+  const loadProfile = async () => {
+    try {
+      const response = await getProfile();
+      setUser(response?.data?.data?.user ?? null);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  if (!user) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center">
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-pine" edges={["top"]}>
       {/* Top bar */}
       <View className="relative flex-row items-center justify-center border-b border-fog-200 bg-cream px-4 py-3.5 dark:border-cream/10 dark:bg-pine">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.replace("/home")}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           className="absolute left-3 z-10 h-9 w-9 items-center justify-center"
@@ -70,9 +94,9 @@ export default function ProfileScreen() {
           <View className="relative">
             <View className="h-32 w-32 items-center justify-center rounded-full bg-cream p-2 dark:bg-ink">
               <View className="h-full w-full items-center justify-center rounded-full bg-fog-100 dark:bg-pine">
-                {user.profile_image ? (
+                {safeUser.profile_image ? (
                   <Image
-                    source={{ uri: user.profile_image }}
+                    source={{ uri: safeUser.profile_image }}
                     style={{ width: 108, height: 108, borderRadius: 54 }}
                   />
                 ) : (
@@ -95,7 +119,7 @@ export default function ProfileScreen() {
           </View>
 
           <Text className="mt-[18px] text-[22px] font-bold text-pine dark:text-cream">
-            {user.name}
+            {safeUser?.name || "User"}
           </Text>
         </View>
 
@@ -109,7 +133,7 @@ export default function ProfileScreen() {
             <InfoRow
               icon="person-outline"
               label="Full Name"
-              value={user.name}
+              value={safeUser.name}
             />
             <View className="ml-16 h-px bg-fog-200 dark:bg-cream/10" />
             <InfoRow
