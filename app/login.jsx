@@ -1,10 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { sendLoginOTP } from "../src/authApi";
 
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,

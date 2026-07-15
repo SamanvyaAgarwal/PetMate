@@ -383,6 +383,12 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={pet.id}
                   activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/pet-profile",
+                      params: { petId: pet.id },
+                    })
+                  }
                   className={`items-center ${
                     index === pets.length - 1 ? "" : "mr-2"
                   }`}
