@@ -2,20 +2,10 @@ import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+export const IMAGE_BASE_URL = "http://192.168.1.17:5000";
+
 const getBaseURL = () => {
-    if (process.env.EXPO_PUBLIC_API_URL) {
-        return process.env.EXPO_PUBLIC_API_URL;
-    }
-
-    if (typeof window !== "undefined") {
-        return `http://${window.location.hostname}:5000/api`;
-    }
-
-    if (Platform.OS === "android") {
-        return "http://10.0.2.2:5000/api";
-    }
-
-    return "http://localhost:5000/api";
+    return `${IMAGE_BASE_URL}/api`;
 };
 
 const api = axios.create({
@@ -28,17 +18,13 @@ const api = axios.create({
 
 api.interceptors.request.use(
     async (config) => {
-        try {
-            const token = await AsyncStorage.getItem("token");
+        const token = await AsyncStorage.getItem("token");
 
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
-
-            return config;
-        } catch (error) {
-            return config;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
         }
+
+        return config;
     },
     (error) => Promise.reject(error)
 );

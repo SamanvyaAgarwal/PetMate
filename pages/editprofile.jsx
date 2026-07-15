@@ -1,9 +1,14 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { getProfile, updateProfile } from "../src/authApi";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { IMAGE_BASE_URL } from "../src/axios";
+import { uploadProfileImage } from "../src/authApi";
 import { useColorScheme } from "nativewind";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import {
   Alert,
   Modal,
@@ -18,19 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // TODO: replace with real logged-in user data — GET /me
 // Shape mirrors the `users` table columns exactly
-const MOCK_USER = {
-  name: "Sam Gdhdh",
-  login_method: "phone", // enum('email','phone') — immutable, set at signup
-  email: "",
-  phone: "9181074472",
-  profile_image: null,
-  address: "",
-  city: "",
-  state: "",
-  district: "",
-  country: "",
-  pincode: "",
-};
+
 
 // TODO: replace with a real country list (or a country-picker package)
 const COUNTRY_OPTIONS = [
@@ -55,6 +48,21 @@ const STATE_OPTIONS = [
   "Other",
 ];
 
+const GENDER_OPTIONS = ["Male", "Female", "Other"];
+
+const normalizeGender = (value) => {
+  if (!value) return "";
+
+  const trimmed = String(value).trim();
+  const lower = trimmed.toLowerCase();
+
+  if (lower === "male" || lower === "m") return "Male";
+  if (lower === "female" || lower === "f") return "Female";
+  if (lower === "other" || lower === "o") return "Other";
+
+  return trimmed;
+};
+
 export default function EditProfileScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -62,22 +70,23 @@ export default function EditProfileScreen() {
   const placeholderColor = isDark ? "#FBF3E766" : "#2A262066";
 
   const [form, setForm] = useState({
-    name: MOCK_USER.name,
-    email: MOCK_USER.email,
-    phone: MOCK_USER.phone,
-    address: MOCK_USER.address,
-    city: MOCK_USER.city,
-    state: MOCK_USER.state,
-    district: MOCK_USER.district,
-    country: MOCK_USER.country,
-    pincode: MOCK_USER.pincode,
+    name: "",
+    email: "",
+    phone: "",
+    gender: "",
+    address: "",
+    city: "",
+    state: "",
+    district: "",
+    country: "",
+    pincode: "",
+    login_method: "",
   });
-  const [profileImage, setProfileImage] = useState(MOCK_USER.profile_image);
+  const [profileImage, setProfileImage] = useState(null);
   const [saving, setSaving] = useState(false);
   const [activePicker, setActivePicker] = useState(null); // "country" | "state" | null
 
-  const isPhoneUser = MOCK_USER.login_method === "phone";
-
+  const isPhoneUser = form.login_method === "phone";
   const updateField = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -106,15 +115,96 @@ export default function EditProfileScreen() {
   };
 
   const handleUpdate = async () => {
-    setSaving(true);
     try {
-      // TODO: PATCH /me with { ...form, profile_image: profileImage }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      router.back();
-    } catch (e) {
-      // TODO: surface a real error message
+      const normalizedGender = normalizeGender(form.gender);
+
+      if (!normalizedGender) {
+        Alert.alert("Please select your gender");
+        return;
+      }
+
+      setSaving(true);
+      const response = await updateProfile({
+        name: form.name,
+        phone: form.phone,
+        gender: normalizedGender,
+        country: form.country,
+        state: form.state,
+        district: form.district,
+        city: form.city,
+        pincode: form.pincode,
+        address: form.address,
+        profile_image: profileImage,
+      });
+
+      Alert.alert(
+        "Success",
+        response.data.message
+      );
+
+      router.replace("/profile");
+
+    } catch (error) {
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Something went wrong"
+      );
+
     } finally {
       setSaving(false);
+    }
+  };
+  const handlePickImage = async () => {
+    try {
+      // Ask for gallery permission
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission Required",
+          "Please allow gallery access."
+        );
+        return;
+      }
+
+      // Open gallery
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const image = result.assets[0];
+
+      const formData = new FormData();
+
+      formData.append("profile_image", {
+        uri: image.uri,
+        name: "profile.jpg",
+        type: "image/jpeg",
+      });
+
+      const response = await uploadProfileImage(formData);
+
+      const imagePath = response.data.data.profile_image;
+
+      const fullImageUrl =
+        "http://103.59.75.177:5000" + imagePath;
+
+      setProfileImage(fullImageUrl);
+
+      setProfileImage(`${IMAGE_BASE_URL}${imagePath}`);
+
+      Alert.alert("Success", "Profile image uploaded successfully.");
+
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Failed to upload image.");
     }
   };
 
@@ -125,6 +215,49 @@ export default function EditProfileScreen() {
       field: "country",
     },
     state: { title: "Select State", options: STATE_OPTIONS, field: "state" },
+    gender: {
+      title: "Select Gender",
+      options: GENDER_OPTIONS,
+      field: "gender",
+    },
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [])
+  );
+  const loadProfile = async () => {
+    try {
+      const response = await getProfile();
+
+      const user = response.data.data.user;
+
+      setForm({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        gender: normalizeGender(user.gender || ""),
+        address: user.address || "",
+        city: user.city || "",
+        state: user.state || "",
+        district: user.district || "",
+        country: user.country || "",
+        pincode: user.pincode || "",
+        login_method: user.login_method || "email",
+      });
+
+      if (user.profile_image) {
+        setProfileImage(
+          user.profile_image
+            ? `${IMAGE_BASE_URL}${user.profile_image}`
+            : null
+        );
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -153,14 +286,14 @@ export default function EditProfileScreen() {
         <View className="items-center pb-6 pt-9">
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={handlePickAvatar}
+            onPress={handlePickImage}
             className="relative"
           >
             <View className="h-32 w-32 items-center justify-center rounded-full bg-cream p-2 dark:bg-ink">
               <View className="h-full w-full items-center justify-center overflow-hidden rounded-full bg-pine/60">
                 {profileImage ? (
                   <Image
-                    source={{ uri: profileImage }}
+                    source={{ uri: profileImage }} 
                     style={{ width: "100%", height: "100%" }}
                   />
                 ) : (
@@ -313,6 +446,26 @@ export default function EditProfileScreen() {
               placeholderTextColor={placeholderColor}
               className="text-base text-pine dark:text-cream"
             />
+          </Field>
+
+          {/* Gender — dropdown */}
+          <Field label="Gender">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setActivePicker("gender")}
+              className="flex-row items-center justify-between"
+            >
+              <Text
+                className={
+                  form.gender
+                    ? "text-base text-pine dark:text-cream"
+                    : "text-base text-pine/40 dark:text-cream/40"
+                }
+              >
+                {form.gender || "Select Gender"}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={iconColor} />
+            </TouchableOpacity>
           </Field>
 
           {/* State — dropdown */}

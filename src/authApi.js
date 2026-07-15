@@ -23,3 +23,14 @@ export const getProfile = () => {
 export const completeProfile = (data) => {
     return api.post("/user/complete-profile", data);
 };
+
+export const updateProfile = (data) => {
+    return api.post("/user/complete-profile", data);
+};
+export const uploadProfileImage = (formData) => {
+    return api.post("/user/upload-profile-image", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};

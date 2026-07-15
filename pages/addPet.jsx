@@ -2,9 +2,11 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { addPet } from "../src/petApi";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import {
+  Alert,
   Image,
   Modal,
   Platform,
@@ -24,11 +26,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // });
 // const { serial } = await res.json();
 // The backend assigns and returns the serial only on successful creation.
-async function createPetOnBackend(formData) {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  const random = Math.floor(100000 + Math.random() * 900000);
-  return { ...formData, serial: `PET-${random}` };
-}
+
 
 const GENDER_OPTIONS = ["Male", "Female", "Unknown"];
 const CATEGORY_OPTIONS = ["Dog", "Cat", "Bird", "Rabbit", "Reptile", "Other"];
@@ -65,14 +63,35 @@ export default function AddPetScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSave = async () => {
-    setSaving(true);
     try {
-      // Backend assigns the serial as part of creating the pet record
-      const created = await createPetOnBackend(form);
-      // TODO: e.g. add `created` pet to local/global pet list, then navigate
+      setSaving(true);
+
+      const response = await addPet({
+        pet_name: form.name,
+        pet_type: form.category,
+        breed: form.breed,
+        gender: form.gender,
+        dob: form.dob,
+        weight: form.weight,
+        vaccinated: false,
+        about_pet: "",
+        pet_image: images.length > 0 ? images[0].uri : null,
+      });
+
+      Alert.alert(
+        "Success",
+        response.data.message
+      );
+
       router.back();
-    } catch (e) {
-      // TODO: surface a real error message to the user
+
+    } catch (error) {
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Something went wrong"
+      );
+
     } finally {
       setSaving(false);
     }

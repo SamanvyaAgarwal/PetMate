@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
+import { IMAGE_BASE_URL } from "../src/axios";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -141,9 +142,11 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
             onPress={() => router.push("/profile")}
             className="flex-row items-center gap-2 rounded-full border border-pine/10 bg-white py-1 pl-1 pr-3 dark:border-cream/10 dark:bg-pine"
           >
-            {avatarUri ? (
+           {user?.profile_image ? (
               <Image
-                source={{ uri: avatarUri }}
+                source={{
+                  uri: `${IMAGE_BASE_URL}${user?.profile_image}`,
+                }}
                 style={{ width: 28, height: 28, borderRadius: 14 }}
               />
             ) : (
@@ -196,9 +199,9 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
                     onPress={() => handleNavigate("/profile")}
                     className="flex-row items-center gap-3"
                   >
-                    {avatarUri ? (
+                    {user?.profile_image ? (
                       <Image
-                        source={{ uri: avatarUri }}
+                        source={{ uri: `${IMAGE_BASE_URL}${user.profile_image}` }}
                         style={{ width: 52, height: 52, borderRadius: 26 }}
                       />
                     ) : (
