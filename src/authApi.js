@@ -20,6 +20,10 @@ export const getProfile = () => {
     return api.get("/user/profile");
 };
 
+export const getMyPets = () => {
+    return api.get("/pets");
+};
+
 export const completeProfile = (data) => {
     return api.post("/user/complete-profile", data);
 };

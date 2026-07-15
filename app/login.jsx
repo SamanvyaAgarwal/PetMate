@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { sendLoginOTP } from "../src/authApi";
 
 // Thin radiating ticks around the paw seal — evokes a stamped kennel-club emblem
 const SEAL_TICKS = Array.from({ length: 14 });
