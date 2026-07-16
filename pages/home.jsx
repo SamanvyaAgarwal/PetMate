@@ -6,7 +6,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import { useEffect, useRef, useState } from "react";
 import { IMAGE_BASE_URL } from "@/src/axios";
-import { getMyPets } from "@/src/authApi";
+import {
+  getMyPets,
+  getBanners,
+} from "../src/authApi";
 import {
   Animated,
   Dimensions,
@@ -38,32 +41,7 @@ const CARD_WIDTH =
 
 
 // TODO: replace with a real fetch — GET /banners (offers, announcements, etc.)
-const MOCK_BANNERS = [
-  {
-    id: "1",
-    title: "20% off Grooming",
-    subtitle: "This week only — book before Sunday",
-    cta: "Book Grooming",
-    icon: "cut",
-    tint: "bg-mustard",
-  },
-  {
-    id: "2",
-    title: "Home Vet Visits",
-    subtitle: "Now available near you",
-    cta: "Book a Visit",
-    icon: "medkit",
-    tint: "bg-clay",
-  },
-  {
-    id: "3",
-    title: "Refer a friend",
-    subtitle: "You both get $10 credit",
-    cta: "Invite Now",
-    icon: "gift",
-    tint: "bg-pine",
-  },
-];
+
 
 // TODO: consider fetching this list too, if categories can change server-side
 const CATEGORIES = [
@@ -292,9 +270,9 @@ function PetLoveSection({ isDark }) {
 
 export default function HomeScreen() {
   const [pets, setPets] = useState([]);
-  const [banners, setBanners] = useState(MOCK_BANNERS);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [banners, setBanners] = useState([]);
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -325,9 +303,23 @@ export default function HomeScreen() {
       console.log("Load Pets Error:", error.response?.data || error);
     }
   };
+  const loadBanners = async () => {
+    try {
+
+      const response = await getBanners();
+
+      setBanners(response.data.data.banners);
+
+    } catch (error) {
+
+      console.log(error.response?.data || error);
+
+    }
+  };
   useFocusEffect(
     useCallback(() => {
       loadPets();
+      loadBanners();
     }, [])
   );
 

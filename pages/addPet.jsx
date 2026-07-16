@@ -3,6 +3,10 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { addPet } from "../src/petApi";
+import {
+  uploadProfileImage,
+  uploadPetImage,
+} from "../src/authApi";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import {
@@ -66,6 +70,24 @@ export default function AddPetScreen() {
     try {
       setSaving(true);
 
+      let petImage = null;
+
+      // Upload image first
+      if (images.length > 0) {
+        const formData = new FormData();
+
+        formData.append("image", {
+          uri: images[0].uri,
+          name: "pet.jpg",
+          type: "image/jpeg",
+        });
+
+        const uploadResponse = await uploadPetImage(formData);
+
+        petImage = uploadResponse.data.data.pet_image;
+      }
+
+      // Save pet
       const response = await addPet({
         pet_name: form.name,
         pet_type: form.category,
@@ -75,17 +97,16 @@ export default function AddPetScreen() {
         weight: form.weight,
         vaccinated: false,
         about_pet: "",
-        pet_image: images.length > 0 ? images[0].uri : null,
+        pet_image: petImage,
       });
 
-      Alert.alert(
-        "Success",
-        response.data.message
-      );
+      Alert.alert("Success", response.data.message);
 
       router.back();
 
     } catch (error) {
+
+      console.log(error.response?.data || error);
 
       Alert.alert(
         "Error",

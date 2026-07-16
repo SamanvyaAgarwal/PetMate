@@ -38,3 +38,13 @@ export const uploadProfileImage = (formData) => {
         },
     });
 };
+export const uploadPetImage = (formData) => {
+    return api.post("/pets/upload-pet-image", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};
+export const getBanners = () => {
+    return api.get("/banners");
+};
