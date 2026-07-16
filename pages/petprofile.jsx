@@ -39,6 +39,15 @@ const TABS = [
   { key: "medical", label: "Medical Hx", icon: "medical-outline" },
 ];
 
+// Tabs whose "Add Record" flow routes somewhere — Medical Hx intentionally has none,
+// since it's a read-only history view (no add button shown for it)
+const ADD_RECORD_ROUTES = {
+  vaccines: "/screens/add-vaccine-record",
+  allergies: "/screens/add-allergy",
+  hobbies: "/screens/add-hobby",
+  walks: "/screens/start-walk",
+};
+
 export default function PetProfileScreen() {
   const { petId } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState("vaccines");
@@ -51,7 +60,6 @@ export default function PetProfileScreen() {
 
   const handleEdit = () => {
     setShowOptionsMenu(false);
-    // TODO: navigate to an edit-pet form
     router.push({ pathname: "/edit-pet", params: { petId } });
   };
 
@@ -78,7 +86,9 @@ export default function PetProfileScreen() {
   };
 
   const handleAddRecord = () => {
-    // TODO: open an add-record form for the active tab (vaccines, allergies, etc.)
+    const route = ADD_RECORD_ROUTES[activeTab];
+    if (!route) return;
+    router.push({ pathname: route, params: { petId } });
   };
 
   return (
@@ -205,21 +215,6 @@ export default function PetProfileScreen() {
           </View>
         </View>
 
-        {/* ---------- All Records + Book Services ---------- */}
-        {/* <View className="mt-6 flex-row items-center justify-between px-4">
-          <Text className="text-lg font-extrabold text-pine">All Records</Text>
-          <TouchableOpacity
-            onPress={handleBookServices}
-            activeOpacity={0.7}
-            className="flex-row items-center gap-1.5"
-          >
-            <Text className="text-sm font-semibold text-clay underline">
-              Book Services
-            </Text>
-            <Ionicons name="paw" size={14} color="#B5533C" />
-          </TouchableOpacity>
-        </View> */}
-
         {/* ---------- Stat cards ---------- */}
         <View className="mt-4 flex-row gap-3 px-4">
           <View className="flex-1 rounded-2xl bg-mustard/15 p-4">
@@ -284,20 +279,24 @@ export default function PetProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* ---------- Fixed Add Record button ---------- */}
-      <SafeAreaView
-        edges={["bottom"]}
-        className="border-t border-pine/10 bg-cream px-4 pt-3"
-      >
-        <TouchableOpacity
-          onPress={handleAddRecord}
-          activeOpacity={0.85}
-          className="mb-3 flex-row items-center justify-center gap-2 rounded-2xl bg-mustard py-4"
+      {/* ---------- Fixed Add Record button — hidden on Medical Hx ---------- */}
+      {activeTab !== "medical" && (
+        <SafeAreaView
+          edges={["bottom"]}
+          className="border-t border-pine/10 bg-cream px-4 pt-3"
         >
-          <Ionicons name="add" size={20} color="#1F3D2B" />
-          <Text className="text-base font-extrabold text-pine">Add Record</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+          <TouchableOpacity
+            onPress={handleAddRecord}
+            activeOpacity={0.85}
+            className="mb-3 flex-row items-center justify-center gap-2 rounded-2xl bg-mustard py-4"
+          >
+            <Ionicons name="add" size={20} color="#1F3D2B" />
+            <Text className="text-base font-extrabold text-pine">
+              {activeTabData.key === "walks" ? "Start Walking" : "Add Record"}
+            </Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
     </View>
   );
 }

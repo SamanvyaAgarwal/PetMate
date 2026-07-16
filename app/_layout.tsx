@@ -22,6 +22,22 @@ export default function RootLayout() {
         <Stack.Screen name="pet-profile" options={{ headerShown: false }} />
         <Stack.Screen name="edit-pet" options={{ headerShown: false }} />
         <Stack.Screen
+          name="screens/add-vaccine-record"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="screens/add-allergy"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="screens/add-hobby"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="screens/start-walk"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
         />
