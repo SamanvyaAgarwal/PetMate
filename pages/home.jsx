@@ -2,7 +2,11 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import { useEffect, useRef, useState } from "react";
+import { IMAGE_BASE_URL } from "@/src/axios";
+import { getMyPets } from "@/src/authApi";
 import {
   Animated,
   Dimensions,
@@ -31,10 +35,7 @@ const CARD_WIDTH =
   (width - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
 // TODO: replace with a real fetch — GET /me/pets, populated at login
-const MOCK_PETS = [
-  { id: "1", name: "Bruno", breed: "Labrador", avatar: null },
-  { id: "2", name: "Milo", breed: "Beagle", avatar: null },
-];
+
 
 // TODO: replace with a real fetch — GET /banners (offers, announcements, etc.)
 const MOCK_BANNERS = [
@@ -173,7 +174,8 @@ function PetLoveSection({ isDark }) {
   });
 
   const lineColor = "#FBF3E7";
-
+ 
+  
   return (
     <View
       style={{ height: SCREEN_HEIGHT * 0.55 }}
@@ -289,7 +291,7 @@ function PetLoveSection({ isDark }) {
 }
 
 export default function HomeScreen() {
-  const [pets, setPets] = useState(MOCK_PETS);
+  const [pets, setPets] = useState([]);
   const [banners, setBanners] = useState(MOCK_BANNERS);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -299,11 +301,35 @@ export default function HomeScreen() {
 
   const bannerRef = useRef(null);
 
-  useEffect(() => {
-    // TODO: fetch real pets + banners here, e.g.:
-    // fetchPets().then(setPets);
-    // fetchBanners().then(setBanners);
-  }, []);
+  const loadPets = async () => {
+    try {
+      const response = await getMyPets();
+
+      const petList = response.data?.data?.pets || [];
+
+      console.log("Fetched Pets:", petList);
+
+      setPets(
+        petList.map((pet) => ({
+          id: pet.pet_uid,
+          name: pet.pet_name,
+          avatar: pet.pet_image
+            ? `${IMAGE_BASE_URL}${pet.pet_image}`
+            : null,
+          breed: pet.breed,
+          pet_type: pet.pet_type,
+          gender: pet.gender,
+        }))
+      );
+    } catch (error) {
+      console.log("Load Pets Error:", error.response?.data || error);
+    }
+  };
+  useFocusEffect(
+    useCallback(() => {
+      loadPets();
+    }, [])
+  );
 
   // Auto-advance the banner carousel every 3.5s
   useEffect(() => {
@@ -396,7 +422,11 @@ export default function HomeScreen() {
                   {pet.avatar ? (
                     <Image
                       source={{ uri: pet.avatar }}
-                      style={{ width: 64, height: 64, borderRadius: 32 }}
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 32,
+                      }}
                     />
                   ) : (
                     <View className="h-16 w-16 items-center justify-center rounded-full border-2 border-mustard bg-cream shadow-sm dark:bg-pine">
