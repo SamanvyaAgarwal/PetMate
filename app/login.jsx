@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const [loginMethod, setLoginMethod] = useState("email"); // "email" | "phone"
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   // const [password, setPassword] = useState("");
   // const [showPassword, setShowPassword] = useState(false);
 
@@ -29,36 +31,37 @@ export default function LoginScreen() {
     loginMethod === "email" ? email.trim().length > 0 : phone.trim().length > 0;
 
   const handleLogin = async () => {
-    // try {
-    //   if (!email.trim()) {
-    //     return Alert.alert("Error", "Please enter your email");
-    //   }
+    if (isLoggingIn) return;
+    try {
+      if (!email.trim()) {
+        return Alert.alert("Error", "Please enter your email");
+      }
+      setIsLoggingIn(true);
+      const response = await sendLoginOTP({
+        email: email.trim().toLowerCase(),
+      });
 
-    //   const response = await sendLoginOTP({
-    //     email: email.trim().toLowerCase(),
-    //   });
+      Alert.alert("Success", response.data.message);
 
-    //   Alert.alert("Success", response.data.message);
-
-    //   router.push({
-    //     pathname: "/otpscreen",
-    //     params: {
-    //       contact: email.trim().toLowerCase(),
-    //       method: "email",
-    //       type: "login",
-    //     },
-    //   });
-    // } catch (error) {
-    //   console.log("Login error:", error);
-    //   Alert.alert(
-    //     "Error",
-    //     error?.response?.data?.message ||
-    //       error?.message ||
-    //       "Something went wrong",
-    //   );
-    // }
-
-    router.push("home");
+      router.push({
+        pathname: "/otpscreen",
+        params: {
+          contact: email.trim().toLowerCase(),
+          method: "email",
+          type: "login",
+        },
+      });
+    } catch (error) {
+      console.log("Login error:", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong",
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   return (
@@ -254,10 +257,10 @@ export default function LoginScreen() {
               onPress={handleLogin}
               activeOpacity={0.85}
               className="self-center"
-              disabled={!isReady}
+              disabled={!isReady || isLoggingIn}
               style={{
                 transform: [{ rotate: "-2deg" }],
-                opacity: isReady ? 1 : 0.4,
+                opacity: isReady && !isLoggingIn ? 1 : 0.4,
               }}
             >
               <View className="relative w-[280px] rounded-2xl bg-mustard px-6 py-5 shadow-lg">
@@ -271,14 +274,18 @@ export default function LoginScreen() {
                       MEMBER TAG
                     </Text>
                     <Text className="mt-0.5 text-lg font-extrabold text-pine">
-                      Log In
+                      {isLoggingIn ? "Sending Otp…" : "Log In"}
                     </Text>
                   </View>
-                  <Ionicons
-                    name="arrow-forward-circle"
-                    size={30}
-                    color={"#1F3D2B"}
-                  />
+                  {isLoggingIn ? (
+                    <ActivityIndicator color="#1F3D2B" />
+                  ) : (
+                    <Ionicons
+                      name="arrow-forward-circle"
+                      size={30}
+                      color="#1F3D2B"
+                    />
+                  )}
                 </View>
               </View>
             </TouchableOpacity>

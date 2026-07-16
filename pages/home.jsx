@@ -1,16 +1,11 @@
+import { IMAGE_BASE_URL } from "@/src/axios";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking } from "react-native";
-import { IMAGE_BASE_URL } from "@/src/axios";
-import {
-  getMyPets,
-  getBanners,
-} from "../src/authApi";
 import {
   Animated,
   Dimensions,
@@ -25,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
+import { getBanners, getMyPets } from "../src/authApi";
 
 import Header from "@/components/header";
 
@@ -40,9 +36,7 @@ const CARD_WIDTH =
 
 // TODO: replace with a real fetch — GET /me/pets, populated at login
 
-
 // TODO: replace with a real fetch — GET /banners (offers, announcements, etc.)
-
 
 // TODO: consider fetching this list too, if categories can change server-side
 const CATEGORIES = [
@@ -153,8 +147,7 @@ function PetLoveSection({ isDark }) {
   });
 
   const lineColor = "#FBF3E7";
- 
-  
+
   return (
     <View
       style={{ height: SCREEN_HEIGHT * 0.55 }}
@@ -292,13 +285,11 @@ export default function HomeScreen() {
         petList.map((pet) => ({
           id: pet.pet_uid,
           name: pet.pet_name,
-          avatar: pet.pet_image
-            ? `${IMAGE_BASE_URL}${pet.pet_image}`
-            : null,
+          avatar: pet.pet_image ? `${IMAGE_BASE_URL}${pet.pet_image}` : null,
           breed: pet.breed,
           pet_type: pet.pet_type,
           gender: pet.gender,
-        }))
+        })),
       );
     } catch (error) {
       console.log("Load Pets Error:", error.response?.data || error);
@@ -306,22 +297,18 @@ export default function HomeScreen() {
   };
   const loadBanners = async () => {
     try {
-
       const response = await getBanners();
 
       setBanners(response.data.data.banners);
-
     } catch (error) {
-
       console.log(error.response?.data || error);
-
     }
   };
   useFocusEffect(
     useCallback(() => {
       loadPets();
       loadBanners();
-    }, [])
+    }, []),
   );
 
   // Auto-advance the banner carousel every 3.5s
@@ -431,14 +418,14 @@ export default function HomeScreen() {
                   }
                   className={`items-center ${
                     index === pets.length - 1 ? "" : "mr-2"
-                  }`}
+                  } pt-1`}
                 >
                   {pet.avatar ? (
                     <Image
                       source={{ uri: pet.avatar }}
                       style={{
-                        width: 64,
-                        height: 64,
+                        width: 52,
+                        height: 52,
                         borderRadius: 32,
                       }}
                     />

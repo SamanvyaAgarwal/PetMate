@@ -18,6 +18,12 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { BottomDrawer } from "@/components/bottom-drawer";
+import { AllergyForm } from "@/components/forms/allergy-form";
+import { HobbyForm } from "@/components/forms/hobby-form";
+import { VaccineRecordForm } from "@/components/forms/vaccine-record-form";
+import { WalkForm } from "@/components/forms/walk-form";
+
 // Thin radiating ticks around the paw seal — reused from the auth screens
 // so the pet's hero photo feels like part of the same visual family
 const SEAL_TICKS = Array.from({ length: 14 });
@@ -33,13 +39,13 @@ const TABS = [
   { key: "medical", label: "Medical Hx", icon: "medical-outline" },
 ];
 
-// Tabs whose "Add Record" flow routes somewhere — Medical Hx intentionally has none,
-// since it's a read-only history view (no add button shown for it)
-const ADD_RECORD_ROUTES = {
-  vaccines: "/screens/add-vaccine-record",
-  allergies: "/screens/add-allergy",
-  hobbies: "/screens/add-hobby",
-  walks: "/screens/start-walk",
+// Tabs whose "Add Record" button opens a drawer — Medical Hx intentionally
+// has none, since it's a read-only history view (no add button shown for it)
+const DRAWER_TITLES = {
+  vaccines: "Add Vaccine Record",
+  allergies: "Add Allergy",
+  hobbies: "Add Hobby",
+  walks: "Start Walk",
 };
 
 const calculateAge = (dob) => {
@@ -79,6 +85,9 @@ export default function PetProfileScreen() {
   const [pet, setPet] = useState(null);
   const [activeTab, setActiveTab] = useState("vaccines");
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  // Which "Add Record" drawer is open, if any: one of the DRAWER_TITLES
+  // keys, or null when every drawer is closed.
+  const [openDrawer, setOpenDrawer] = useState(null);
   const insets = useSafeAreaInsets();
 
   const petName = pet?.pet_name || pet?.name || "Pet";
@@ -155,29 +164,10 @@ export default function PetProfileScreen() {
   };
 
   const handleAddRecord = () => {
-    const route = ADD_RECORD_ROUTES[activeTab];
-    if (!route) return;
-    router.push({ pathname: route, params: { petId } });
+    if (!DRAWER_TITLES[activeTab]) return;
+    setOpenDrawer(activeTab);
   };
-  useEffect(() => {
-    if (petId) {
-      loadPet();
-    }
-  }, [petId]);
 
-  if (!pet) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center">
-        <Text>Loading...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  console.log("Pet Image Path:", pet.pet_image);
-  console.log("Full URL:", `${IMAGE_BASE_URL}${pet.pet_image}`);
-  console.log("petImageUri:", petImageUri);
-  console.log("DOB:", pet.dob);
-  console.log("Calculated Age:", calculateAge(pet.dob));
   return (
     <View className="flex-1 bg-cream">
       {/* ---------- Header ---------- */}
@@ -385,6 +375,39 @@ export default function PetProfileScreen() {
           </TouchableOpacity>
         </SafeAreaView>
       )}
+
+      {/* ---------- Add Record drawers ---------- */}
+      <BottomDrawer
+        visible={openDrawer === "vaccines"}
+        onClose={closeDrawer}
+        title={DRAWER_TITLES.vaccines}
+      >
+        <VaccineRecordForm petId={petId} onClose={closeDrawer} />
+      </BottomDrawer>
+
+      <BottomDrawer
+        visible={openDrawer === "allergies"}
+        onClose={closeDrawer}
+        title={DRAWER_TITLES.allergies}
+      >
+        <AllergyForm petId={petId} onClose={closeDrawer} />
+      </BottomDrawer>
+
+      <BottomDrawer
+        visible={openDrawer === "hobbies"}
+        onClose={closeDrawer}
+        title={DRAWER_TITLES.hobbies}
+      >
+        <HobbyForm petId={petId} onClose={closeDrawer} />
+      </BottomDrawer>
+
+      <BottomDrawer
+        visible={openDrawer === "walks"}
+        onClose={closeDrawer}
+        title={DRAWER_TITLES.walks}
+      >
+        <WalkForm petId={petId} onClose={closeDrawer} />
+      </BottomDrawer>
     </View>
   );
 }
