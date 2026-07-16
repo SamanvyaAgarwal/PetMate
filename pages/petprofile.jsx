@@ -1,7 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
+import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { getPetById, deletePet } from "../src/authApi";
+import { IMAGE_BASE_URL } from "../src/axios";
 import {
   Alert,
   Modal,
@@ -28,14 +30,6 @@ const SEAL_TICKS = Array.from({ length: 14 });
 
 // TODO: replace with a real fetch — GET /pets/:petId, using the petId param
 // passed in from wherever this screen is opened (e.g. tapping a pet on Home)
-const MOCK_PET = {
-  name: "Bruno",
-  breed: "Labrador Retriever",
-  avatar: null,
-  weight: "24 kg",
-  age: "2 yrs",
-  birthDate: "2024-03-12",
-};
 
 const TABS = [
   { key: "vaccines", label: "Vaccines", icon: "flask-outline" },
@@ -54,8 +48,41 @@ const DRAWER_TITLES = {
   walks: "Start Walk",
 };
 
+const calculateAge = (dob) => {
+  if (!dob) return "--";
+
+  const birthDate = new Date(dob);
+  const today = new Date();
+
+  const diffTime = today - birthDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 30) {
+    return `${diffDays} Day${diffDays !== 1 ? "s" : ""}`;
+  }
+
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+
+  if (today.getDate() < birthDate.getDate()) {
+    months--;
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years > 0) {
+    return `${years} Year${years > 1 ? "s" : ""}`;
+  }
+
+  return `${months} Month${months > 1 ? "s" : ""}`;
+};
+
 export default function PetProfileScreen() {
   const { petId } = useLocalSearchParams();
+  const [pet, setPet] = useState(null);
   const [activeTab, setActiveTab] = useState("vaccines");
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   // Which "Add Record" drawer is open, if any: one of the DRAWER_TITLES
@@ -63,8 +90,25 @@ export default function PetProfileScreen() {
   const [openDrawer, setOpenDrawer] = useState(null);
   const insets = useSafeAreaInsets();
 
-  // TODO: fetch pet by petId once the backend exists
-  const pet = MOCK_PET;
+  const petName = pet?.pet_name || pet?.name || "Pet";
+  const petImageUri = pet?.pet_image
+    ? {
+      uri: `${IMAGE_BASE_URL}${pet.pet_image}`,
+    }
+    : null;
+  const petWeight = pet?.weight ?? "—";
+  const petBirthDate = pet?.dob ? new Date(pet.dob).toLocaleDateString() : "Unknown";
+  
+
+  const loadPet = async () => {
+    try {
+      const response = await getPetById(petId);
+      console.log(response.data);
+      setPet(response.data.data.pet);
+    } catch (error) {
+      console.log(error.response?.data || error);
+    }
+  };
   const activeTabData = TABS.find((t) => t.key === activeTab);
 
   const handleEdit = () => {
@@ -72,10 +116,12 @@ export default function PetProfileScreen() {
     router.push({ pathname: "/edit-pet", params: { petId } });
   };
 
+ 
+  
   const handleDeletePress = () => {
     setShowOptionsMenu(false);
     Alert.alert(
-      `Delete ${pet.name}'s profile?`,
+      `Delete ${petName}'s profile?`,
       "This will permanently remove this pet and all of its records. This can't be undone.",
       [
         { text: "Cancel", style: "cancel" },
@@ -84,9 +130,32 @@ export default function PetProfileScreen() {
     );
   };
 
-  const handleConfirmDelete = () => {
-    // TODO: call the real delete-pet API using petId, then remove it from local state
-    router.back();
+  const handleConfirmDelete = async () => {
+    try {
+
+      const response = await deletePet(petId);
+
+      Alert.alert(
+        "Success",
+        response.data.message,
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/home"),
+          },
+        ]
+      );
+
+    } catch (error) {
+
+      console.log(error.response?.data || error);
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Unable to delete pet."
+      );
+
+    }
   };
 
   const handleBookServices = () => {
@@ -98,8 +167,6 @@ export default function PetProfileScreen() {
     if (!DRAWER_TITLES[activeTab]) return;
     setOpenDrawer(activeTab);
   };
-
-  const closeDrawer = () => setOpenDrawer(null);
 
   return (
     <View className="flex-1 bg-cream">
@@ -194,16 +261,17 @@ export default function PetProfileScreen() {
               })}
             </View>
 
-            {pet.avatar ? (
+            {petImageUri ? (
               <Image
-                source={{ uri: pet.avatar }}
+                source={petImageUri}
                 style={{
-                  width: 112,
-                  height: 112,
-                  borderRadius: 56,
-                  borderWidth: 3,
-                  borderColor: "#D9A441",
+                  width: 140,
+                  height: 140,
+                  borderRadius: 70,
                 }}
+                contentFit="cover"
+                onLoad={() => console.log("✅ Pet image loaded")}
+                onError={(error) => console.log("❌ Pet image error:", error)}
               />
             ) : (
               <View className="h-28 w-28 items-center justify-center rounded-full border-[3px] border-mustard bg-cream">
@@ -218,7 +286,7 @@ export default function PetProfileScreen() {
             style={{ transform: [{ rotate: "-1.5deg" }] }}
           >
             <Text className="text-base font-extrabold text-pine">
-              {pet.name}
+              {pet.pet_name}
             </Text>
             <View className="h-3 w-px bg-pine/20" />
             <Text className="text-sm text-pine/60">{pet.breed}</Text>
@@ -230,19 +298,19 @@ export default function PetProfileScreen() {
           <View className="flex-1 rounded-2xl bg-mustard/15 p-4">
             <Text className="text-sm text-pine/60">Weight</Text>
             <Text className="mt-1 text-2xl font-extrabold text-pine">
-              {pet.weight}
+              {petWeight} kg
             </Text>
             <Text className="mt-1 text-xs text-pine/50">
-              Track {pet.name}'s weight
+              Track {petName}{`'`}s weight
             </Text>
           </View>
           <View className="flex-1 rounded-2xl bg-clay/15 p-4">
             <Text className="text-sm text-pine/60">Age</Text>
             <Text className="mt-1 text-2xl font-extrabold text-pine">
-              {pet.age}
+              {calculateAge(pet.dob)}
             </Text>
             <Text className="mt-1 text-xs text-pine/50">
-              Born on {pet.birthDate}
+              Born on {new Date(pet.dob).toLocaleDateString("en-GB")}
             </Text>
           </View>
         </View>

@@ -48,3 +48,16 @@ export const uploadPetImage = (formData) => {
 export const getBanners = () => {
     return api.get("/banners");
 };
+
+export const getPetById = (petId) => {
+    return api.get(`/pets/${petId}`);
+};
+
+export const deletePet = (petId) => {
+    return api.delete(`/pets/${petId}`);
+};
+
+
+export const updatePet = (petId, data) => {
+    return api.put(`/pets/${petId}`, data);
+};
