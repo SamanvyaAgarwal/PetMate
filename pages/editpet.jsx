@@ -2,7 +2,15 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  getPetById,
+  updatePet,
+  uploadPetImage,
+} from "../src/authApi";
+import { IMAGE_BASE_URL } from "../src/axios";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -18,23 +26,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // TODO: replace with a real fetch — GET /pets/:petId — to pre-fill this form
-const MOCK_PET = {
-  name: "Bruno",
-  gender: "male", // "male" | "female"
-  breed: "Labrador Retriever",
-  avatar: null,
-  dob: "12-03-2024",
-  weight: "24",
-  weightUnknown: false,
-  country: "India",
-  state: "Rajasthan",
-  city: "Jaipur",
-  addressLine1: "",
-  addressLine2: "",
-  landmark: "",
-  zipCode: "",
-  registrationNumber: "PT-2024-BRU-0417", // generated when the pet was first added
-};
+
 
 const BREEDS = [
   "Labrador Retriever",
@@ -108,20 +100,21 @@ function DropdownField({ label, value, placeholder, onPress }) {
 export default function EditPetScreen() {
   const { petId } = useLocalSearchParams();
 
-  const [avatar, setAvatar] = useState(MOCK_PET.avatar);
-  const [name, setName] = useState(MOCK_PET.name);
-  const [gender, setGender] = useState(MOCK_PET.gender);
-  const [breed, setBreed] = useState(MOCK_PET.breed);
-  const [dob, setDob] = useState(MOCK_PET.dob);
-  const [weight, setWeight] = useState(MOCK_PET.weight);
-  const [weightUnknown, setWeightUnknown] = useState(MOCK_PET.weightUnknown);
-  const [country, setCountry] = useState(MOCK_PET.country);
-  const [state, setState] = useState(MOCK_PET.state);
-  const [city, setCity] = useState(MOCK_PET.city);
-  const [addressLine1, setAddressLine1] = useState(MOCK_PET.addressLine1);
-  const [addressLine2, setAddressLine2] = useState(MOCK_PET.addressLine2);
-  const [landmark, setLandmark] = useState(MOCK_PET.landmark);
-  const [zipCode, setZipCode] = useState(MOCK_PET.zipCode);
+  const [avatar, setAvatar] = useState(null);
+  const [name, setName] = useState("");
+  const [gender, setGender] = useState("");
+  const [breed, setBreed] = useState("");
+  const [dob, setDob] = useState("");
+  const [weight, setWeight] = useState("");
+  const [weightUnknown, setWeightUnknown] = useState(false);
+  const [country, setCountry] = useState("");
+  const [state, setState] = useState("");
+  const [city, setCity] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
 
   const [showBreedPicker, setShowBreedPicker] = useState(false);
 
@@ -163,11 +156,97 @@ export default function EditPetScreen() {
       "This is your pet's unique PawTrail ID, generated automatically when the profile was first created. It can't be changed.",
     );
   };
+  const loadPet = async () => {
+    try {
 
-  const handleSave = () => {
-    // TODO: call the real update-pet API with petId + all the fields above
-    router.back();
+      const response = await getPetById(petId);
+
+      const pet = response.data.data.pet;
+
+      setName(pet.pet_name);
+      setGender(pet.gender.toLowerCase());
+      setBreed(pet.breed);
+      const formattedDOB = pet.dob
+        ? new Date(pet.dob).toLocaleDateString("en-GB").replace(/\//g, "-")
+        : "";
+
+      setDob(formattedDOB);
+      setRegistrationNumber(pet.pet_uid);
+      setWeight(String(pet.weight || ""));
+      setAvatar(
+        pet.pet_image
+          ? `${IMAGE_BASE_URL}${pet.pet_image}`
+          : null
+      );
+
+    } catch (error) {
+
+      console.log(error.response?.data || error);
+
+    }
   };
+
+  const handleSave = async () => {
+    try {
+      let petImage = avatar;
+
+      // Upload image only if user selected a new one
+      if (avatar && avatar.startsWith("file://")) {
+        const formData = new FormData();
+
+        formData.append("pet_image", {
+          uri: avatar,
+          name: "pet.jpg",
+          type: "image/jpeg",
+        });
+
+        const uploadResponse = await uploadPetImage(formData);
+
+        petImage = uploadResponse.data.data.pet_image;
+        console.log("Uploaded Image:", uploadResponse.data);
+      }
+
+      const data = {
+        pet_name: name.trim(),
+        pet_type: "Dog",
+        breed,
+        gender: gender === "male" ? "Male" : "Female",
+        dob: dob.split("-").reverse().join("-"),
+        weight: weight || null,
+        vaccinated: false,
+        about_pet: "",
+        pet_image: petImage,
+      };
+
+      const response = await updatePet(petId, data);
+
+      Alert.alert("Success", response.data.message, [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ]);
+    } catch (error) {
+      console.log(error.response?.data || error);
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Unable to update pet."
+      );
+    }
+  };
+  
+  // useEffect(() => {
+  //   if (petId) {
+  //     loadPet();
+  //   }
+  // }, [petId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPet();
+    }, [])
+  );
 
   return (
     <View className="flex-1 bg-cream">
@@ -395,7 +474,7 @@ export default function EditPetScreen() {
               </View>
               <View className="rounded-xl border border-pine/15 bg-pine/5 px-4 py-3.5">
                 <Text className="text-[15px] text-pine/60">
-                  {MOCK_PET.registrationNumber}
+                  {registrationNumber}
                 </Text>
               </View>
             </View>

@@ -5,6 +5,7 @@ import { useColorScheme } from "nativewind";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import { useEffect, useRef, useState } from "react";
+import { Linking } from "react-native";
 import { IMAGE_BASE_URL } from "@/src/axios";
 import {
   getMyPets,
@@ -365,7 +366,28 @@ export default function HomeScreen() {
       params: { category: selectedCategory.key, petId: pet.id },
     });
   };
+  const handleBannerPress = (banner) => {
 
+    switch (banner.banner_type) {
+
+      case "service":
+        router.push(`/services/${banner.target}`);
+        break;
+
+      case "screen":
+        router.push(`/${banner.target}`);
+        break;
+
+      case "external":
+        Linking.openURL(banner.target);
+        break;
+
+      default:
+        break;
+
+    }
+
+  };
   return (
     <View className="flex-1 bg-cream dark:bg-pine">
       <Header />
@@ -455,46 +477,39 @@ export default function HomeScreen() {
             onMomentumScrollEnd={handleBannerScroll}
             contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING }}
             renderItem={({ item, index }) => (
-              <View
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => handleBannerPress(item)}
                 style={{
                   width: BANNER_WIDTH,
-                  height: 176,
+                  height: 180,
                   marginRight: index === banners.length - 1 ? 0 : BANNER_GAP,
                 }}
-                className={`justify-between overflow-hidden rounded-2xl ${item.tint} px-6 py-5 shadow-md`}
+                className="overflow-hidden rounded-2xl"
               >
-                {/* Decorative oversized watermark icon */}
-                <Ionicons
-                  name={item.icon}
-                  size={128}
-                  color="#FBF3E7"
-                  style={{
-                    position: "absolute",
-                    right: -24,
-                    bottom: -24,
-                    opacity: 0.15,
-                    transform: [{ rotate: "-12deg" }],
+                {console.log("Banner URL:", `${IMAGE_BASE_URL}${item.image}`)}
+                <Image
+                  source={{
+                    uri: `${IMAGE_BASE_URL}${item.image}`,
                   }}
+                  contentFit="cover"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                  }}
+                  
                 />
 
-                <View>
-                  <Text className="text-2xl font-extrabold leading-7 text-cream">
+                <View className="absolute inset-0 justify-end bg-black/25 p-5">
+                  <Text className="text-2xl font-bold text-white">
                     {item.title}
                   </Text>
-                  <Text className="mt-2 text-[15px] leading-5 text-cream/75">
+
+                  <Text className="mt-1 text-white/80">
                     {item.subtitle}
                   </Text>
                 </View>
-
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  className="self-start rounded-full bg-cream px-5 py-2.5"
-                >
-                  <Text className="text-center text-xs font-extrabold uppercase tracking-wide text-pine">
-                    {item.cta}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             )}
           />
 
