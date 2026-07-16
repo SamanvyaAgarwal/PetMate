@@ -1,12 +1,13 @@
+import { IMAGE_BASE_URL } from "@/src/axios";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEffect } from "react";
-import { getProfile } from "../src/authApi";
+import { getMyPets, getProfile } from "../src/authApi";
 
 // TODO: replace with real logged-in user data — GET /me
 // Shape mirrors the `users` table columns
@@ -26,6 +27,7 @@ const MOCK_USER = {
 
 export default function ProfileScreen() {
   const [user, setUser] = useState(null);
+  const [pets, setPets] = useState([]);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const iconColor = isDark ? "#FBF3E7" : "#1F3D2B";
@@ -55,9 +57,39 @@ export default function ProfileScreen() {
     }
   };
 
+  // Same fetch + mapping as home.jsx's loadPets — pets come from their own
+  // endpoint, not nested inside the profile response.
+  const loadPets = async () => {
+    try {
+      const response = await getMyPets();
+      const petList = response.data?.data?.pets || [];
+
+      setPets(
+        petList.map((pet) => ({
+          id: pet.pet_uid,
+          name: pet.pet_name,
+          avatar: pet.pet_image ? `${IMAGE_BASE_URL}${pet.pet_image}` : null,
+          breed: pet.breed,
+          pet_type: pet.pet_type,
+          gender: pet.gender,
+        })),
+      );
+    } catch (error) {
+      console.log("Load Pets Error:", error.response?.data || error);
+    }
+  };
+
   useEffect(() => {
     loadProfile();
   }, []);
+
+  // useFocusEffect (like home.jsx) so the list stays current if the user
+  // adds/edits a pet elsewhere and comes back to this screen.
+  useFocusEffect(
+    useCallback(() => {
+      loadPets();
+    }, []),
+  );
 
   if (!user) {
     return (
@@ -166,13 +198,55 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* My Pets */}
+        {/* My Pets — existing pets first, "Add Pet" tile always last */}
         <View className="mt-6 px-5">
           <Text className="mb-2 ml-1 text-[13px] font-bold tracking-wide text-ink/50 dark:text-cream/50">
             MY PETS
           </Text>
 
           <View className="mt-1 flex-row flex-wrap gap-3">
+            {pets.map((pet) => (
+              <TouchableOpacity
+                key={pet.id}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({
+                    pathname: "/pet-profile",
+                    params: { petId: pet.id },
+                  })
+                }
+                className="w-40 overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+              >
+                <View className="h-[130px] items-center justify-center bg-fog-50 dark:bg-ink">
+                  {pet.profile_image ? (
+                    <Image
+                      source={{ uri: pet.profile_image }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/20">
+                      <Ionicons name="paw" size={28} color="#1F3D2B" />
+                    </View>
+                  )}
+                </View>
+                <View className="px-3.5 pb-3.5 pt-2.5">
+                  <Text
+                    className="text-base font-bold text-pine dark:text-cream"
+                    numberOfLines={1}
+                  >
+                    {pet.name || "Unnamed"}
+                  </Text>
+                  <Text
+                    className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50"
+                    numberOfLines={1}
+                  >
+                    {pet.breed || "Breed not set"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => router.push("/addPet")}
