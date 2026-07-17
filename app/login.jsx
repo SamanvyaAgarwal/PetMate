@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +13,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { sendLoginOTP } from "../src/authApi";
 
 // Thin radiating ticks around the paw seal — evokes a stamped kennel-club emblem
 const SEAL_TICKS = Array.from({ length: 14 });
@@ -32,36 +30,37 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (isLoggingIn) return;
-    try {
-      if (!email.trim()) {
-        return Alert.alert("Error", "Please enter your email");
-      }
-      setIsLoggingIn(true);
-      const response = await sendLoginOTP({
-        email: email.trim().toLowerCase(),
-      });
+    // try {
+    //   if (!email.trim()) {
+    //     return Alert.alert("Error", "Please enter your email");
+    //   }
+    //   setIsLoggingIn(true);
+    //   const response = await sendLoginOTP({
+    //     email: email.trim().toLowerCase(),
+    //   });
 
-      Alert.alert("Success", response.data.message);
+    //   Alert.alert("Success", response.data.message);
 
-      router.push({
-        pathname: "/otpscreen",
-        params: {
-          contact: email.trim().toLowerCase(),
-          method: "email",
-          type: "login",
-        },
-      });
-    } catch (error) {
-      console.log("Login error:", error);
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message ||
-          error?.message ||
-          "Something went wrong",
-      );
-    } finally {
-      setIsLoggingIn(false);
-    }
+    //   router.push({
+    //     pathname: "/otpscreen",
+    //     params: {
+    //       contact: email.trim().toLowerCase(),
+    //       method: "email",
+    //       type: "login",
+    //     },
+    //   });
+    // } catch (error) {
+    //   console.log("Login error:", error);
+    //   Alert.alert(
+    //     "Error",
+    //     error?.response?.data?.message ||
+    //       error?.message ||
+    //       "Something went wrong",
+    //   );
+    // } finally {
+    //   setIsLoggingIn(false);
+    // }
+    router.push("home");
   };
 
   return (

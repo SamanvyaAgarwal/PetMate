@@ -1,9 +1,10 @@
+import { getProfile } from "@/src/authApi";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
-import { IMAGE_BASE_URL } from "../src/axios";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -12,7 +13,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getProfile } from "@/src/authApi";
 
 const DRAWER_WIDTH = 300;
 
@@ -95,21 +95,26 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
     // TODO: clear auth/session state here before redirecting
     router.replace("/login");
   };
+
   const loadProfile = async () => {
     try {
       const response = await getProfile();
-
       console.log(response.data);
-
-      setUser(response.data.data.user);
+      setUser(response?.data?.data?.user ?? null);
     } catch (error) {
       console.log(error);
     }
   };
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  // Was: useEffect(() => { loadProfile(); }, []) — ran once on first mount
+  // only, so a photo uploaded later (or a slow/failed first request) never
+  // refreshed. useFocusEffect re-runs it every time this screen (and its
+  // Header) regains focus, same pattern as home.jsx / profile.jsx's pet fetch.
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, []),
+  );
 
   return (
     <>
@@ -142,10 +147,10 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
             onPress={() => router.push("/profile")}
             className="flex-row items-center gap-2 rounded-full border border-pine/10 bg-white py-1 pl-1 pr-3 dark:border-cream/10 dark:bg-pine"
           >
-           {user?.profile_image ? (
+            {user?.profile_image ? (
               <Image
                 source={{
-                  uri: `${IMAGE_BASE_URL}${user?.profile_image}`,
+                  uri: user.profile_image,
                 }}
                 style={{ width: 28, height: 28, borderRadius: 14 }}
               />
@@ -201,7 +206,7 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
                   >
                     {user?.profile_image ? (
                       <Image
-                        source={{ uri: `${IMAGE_BASE_URL}${user.profile_image}` }}
+                        source={{ uri: user.profile_image }}
                         style={{ width: 52, height: 52, borderRadius: 26 }}
                       />
                     ) : (
@@ -214,7 +219,7 @@ export default function Header({ userName = "Alex Rivera", avatarUri }) {
                         className="text-base font-bold text-cream"
                         numberOfLines={1}
                       >
-                        {userName}
+                        {user?.name || userName}
                       </Text>
                       <Text className="text-xs text-cream/50">
                         View profile

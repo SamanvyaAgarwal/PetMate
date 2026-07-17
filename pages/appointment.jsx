@@ -57,7 +57,11 @@ function getNextDays(count) {
 }
 
 export default function AppointmentTimeSlotScreen() {
-  const { category, petId, serviceId } = useLocalSearchParams();
+  // Was: only { category, petId, serviceId } — silently dropped the
+  // vendorId/vendorName/serviceTitle that vendors.jsx already sends here,
+  // so order-summary.jsx had nothing to show for "Package" / provider name.
+  const { category, petId, serviceId, serviceTitle, vendorId, vendorName } =
+    useLocalSearchParams();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const iconColor = isDark ? "#FBF3E7" : "#1F3D2B";
@@ -89,13 +93,18 @@ export default function AppointmentTimeSlotScreen() {
 
   const handleContinue = () => {
     if (!selectedTime) return;
-    // TODO: navigate to confirmation/payment step with the full booking payload
+    // Was: pushed to "/booking-confirm". Now goes to the new order-summary
+    // checkout screen, forwarding along the vendor/service context this
+    // screen already had in its params but wasn't using.
     router.push({
-      pathname: "/booking-confirm",
+      pathname: "/order-summary",
       params: {
         category,
         petId,
         serviceId,
+        serviceTitle,
+        vendorId,
+        vendorName,
         date: selectedDate.toISOString(),
         time: selectedTime,
       },

@@ -201,11 +201,18 @@ export default function ServiceListingScreen() {
   };
   const services = DEMO_SERVICES[category] || [];
 
+  // Was: navigated straight into /booking. Now routes into a vendors list for
+  // the chosen service first — vendor selection is what actually kicks off
+  // /booking (see handleSelectVendor in vendors.jsx).
   const handleSelectService = (service) => {
-    // TODO: navigate to booking flow with { category, petId, serviceId: service.id }
     router.push({
-      pathname: "/booking",
-      params: { category, petId, serviceId: service.id },
+      pathname: "/vendors",
+      params: {
+        category,
+        petId,
+        serviceId: service.id,
+        serviceTitle: service.title,
+      },
     });
   };
 

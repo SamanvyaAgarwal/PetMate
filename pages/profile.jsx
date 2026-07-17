@@ -5,9 +5,22 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  Dimensions,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMyPets, getProfile } from "../src/authApi";
+
+const { width } = Dimensions.get("window");
+const SCREEN_PADDING = 20; // matches px-5 on the wrapping View
+const GRID_GAP = 12; // matches gap-3
+const GRID_COLUMNS = 3;
+const PET_CARD_WIDTH =
+  (width - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
 // TODO: replace with real logged-in user data — GET /me
 // Shape mirrors the `users` table columns
@@ -205,6 +218,33 @@ export default function ProfileScreen() {
           </Text>
 
           <View className="mt-1 flex-row flex-wrap gap-3">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push("/addPet")}
+              className="w-[31%] overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+            >
+              <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
+                <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/25">
+                  <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-mustard">
+                    <Ionicons name="add" size={26} color="#1F3D2B" />
+                  </View>
+                </View>
+              </View>
+              <View className="px-3.5 pb-3.5 pt-2.5">
+                <Text className="text-base font-bold text-pine dark:text-cream">
+                  Add Pet
+                </Text>
+                <Text className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50">
+                  Tap to add
+                </Text>
+                <View className="mt-2 self-start rounded-full bg-mustard/20 px-2.5 py-1">
+                  <Text className="text-[11px] font-semibold text-clay">
+                    New
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
             {pets.map((pet) => (
               <TouchableOpacity
                 key={pet.id}
@@ -215,12 +255,12 @@ export default function ProfileScreen() {
                     params: { petId: pet.id },
                   })
                 }
-                className="w-40 overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+                className="w-[31%] overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
               >
-                <View className="h-[130px] items-center justify-center bg-fog-50 dark:bg-ink">
-                  {pet.profile_image ? (
+                <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
+                  {pet.avatar ? (
                     <Image
-                      source={{ uri: pet.profile_image }}
+                      source={{ uri: pet.avatar }}
                       style={{ width: "100%", height: "100%" }}
                       contentFit="cover"
                     />
@@ -246,33 +286,6 @@ export default function ProfileScreen() {
                 </View>
               </TouchableOpacity>
             ))}
-
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push("/addPet")}
-              className="w-40 overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
-            >
-              <View className="h-[130px] items-center justify-center bg-fog-50 dark:bg-ink">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/25">
-                  <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-mustard">
-                    <Ionicons name="add" size={26} color="#1F3D2B" />
-                  </View>
-                </View>
-              </View>
-              <View className="px-3.5 pb-3.5 pt-2.5">
-                <Text className="text-base font-bold text-pine dark:text-cream">
-                  Add Pet
-                </Text>
-                <Text className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50">
-                  Tap to add
-                </Text>
-                <View className="mt-2 self-start rounded-full bg-mustard/20 px-2.5 py-1">
-                  <Text className="text-[11px] font-semibold text-clay">
-                    New
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

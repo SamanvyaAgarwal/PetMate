@@ -21,6 +21,8 @@ export default function RootLayout() {
         <Stack.Screen name="edit-page" options={{ headerShown: false }} />
         <Stack.Screen name="pet-profile" options={{ headerShown: false }} />
         <Stack.Screen name="edit-pet" options={{ headerShown: false }} />
+        <Stack.Screen name="vendors" options={{ headerShown: false }} />
+        <Stack.Screen name="order-summary" options={{ headerShown: false }} />
         <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
