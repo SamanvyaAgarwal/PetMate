@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Modal,
@@ -22,6 +22,7 @@ import { AllergyForm } from "@/components/forms/allergy-form";
 import { HobbyForm } from "@/components/forms/hobby-form";
 import { VaccineRecordForm } from "@/components/forms/vaccine-record-form";
 import { WalkForm } from "@/components/forms/walk-form";
+import { IMAGE_BASE_URL } from "../src/axios";
 
 // Thin radiating ticks around the paw seal — reused from the auth screens
 // so the pet's hero photo feels like part of the same visual family
@@ -88,18 +89,13 @@ export default function PetProfileScreen() {
   // keys, or null when every drawer is closed.
   const [openDrawer, setOpenDrawer] = useState(null);
   const insets = useSafeAreaInsets();
-  // pet?.pet_name
-  //   ? pet?.pet_name
-  //   : "pet" || pet?.name
-  //     ? pet?.name
-  //     : "pet" ||
 
-  const petName = "Pet";
-  const petImageUri = pet?.pet_image ? pet?.pet_image : "PetImage";
-  //   ? {
-  //       uri: `${IMAGE_BASE_URL}${pet?.pet_image}`,
-  //     }
-  //   : null;
+  const petName = pet?.pet_name || pet?.name || "Pet";
+  const petImageUri = pet?.pet_image
+    ? {
+        uri: `${IMAGE_BASE_URL}${pet.pet_image}`,
+      }
+    : null;
   const petWeight = pet?.weight ?? "—";
   const petBirthDate = pet?.dob
     ? new Date(pet.dob).toLocaleDateString()
@@ -115,7 +111,6 @@ export default function PetProfileScreen() {
     }
   };
   const activeTabData = TABS.find((t) => t.key === activeTab);
-  const closeDrawer = () => setOpenDrawer(null);
 
   const handleEdit = () => {
     setShowOptionsMenu(false);
@@ -153,7 +148,7 @@ export default function PetProfileScreen() {
       );
     }
   };
-
+  const closeDrawer = () => setOpenDrawer(null);
   const handleBookServices = () => {
     // TODO: route into service booking with this pet pre-selected,
     // e.g. router.push({ pathname: "/service-listing", params: { petId } })
@@ -164,6 +159,27 @@ export default function PetProfileScreen() {
     setOpenDrawer(activeTab);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      if (petId) {
+        loadPet();
+      }
+    }, [petId]),
+  );
+
+  if (!pet) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center">
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  console.log("Pet Image Path:", pet.pet_image);
+  console.log("Full URL:", `${IMAGE_BASE_URL}${pet.pet_image}`);
+  console.log("petImageUri:", petImageUri);
+  console.log("DOB:", pet.dob);
+  console.log("Calculated Age:", calculateAge(pet.dob));
   return (
     <View className="flex-1 bg-cream">
       {/* ---------- Header ---------- */}
@@ -282,7 +298,7 @@ export default function PetProfileScreen() {
             style={{ transform: [{ rotate: "-1.5deg" }] }}
           >
             <Text className="text-base font-extrabold text-pine">
-              {pet?.pet_name ? pet?.pet_name : "Samanvya"}
+              {pet?.pet_name}
             </Text>
             <View className="h-3 w-px bg-pine/20" />
             <Text className="text-sm text-pine/60">{pet?.breed}</Text>
@@ -294,21 +310,20 @@ export default function PetProfileScreen() {
           <View className="flex-1 rounded-2xl bg-mustard/15 p-4">
             <Text className="text-sm text-pine/60">Weight</Text>
             <Text className="mt-1 text-2xl font-extrabold text-pine">
-              {petWeight ? petWeight : "Unknown"} kg
+              {petWeight} kg
             </Text>
             <Text className="mt-1 text-xs text-pine/50">
-              Track {petName ? petName : "Dog"}
+              Track {petName}
               {`'`}s weight
             </Text>
           </View>
           <View className="flex-1 rounded-2xl bg-clay/15 p-4">
             <Text className="text-sm text-pine/60">Age</Text>
             <Text className="mt-1 text-2xl font-extrabold text-pine">
-              {calculateAge(pet?.dob ? pet?.dob : "12")}
+              {calculateAge(pet?.dob)}
             </Text>
             <Text className="mt-1 text-xs text-pine/50">
-              Born on{" "}
-              {new Date(pet?.dob ? pet?.dob : "12").toLocaleDateString("en-GB")}
+              Born on {new Date(pet?.dob).toLocaleDateString("en-GB")}
             </Text>
           </View>
         </View>

@@ -2,8 +2,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 
+import { SuccessDrawer } from "@/components/success-drawer";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { sendLoginOTP } from "../src/authApi";
 
 // Thin radiating ticks around the paw seal — evokes a stamped kennel-club emblem
 const SEAL_TICKS = Array.from({ length: 14 });
@@ -25,42 +28,52 @@ export default function LoginScreen() {
   // const [password, setPassword] = useState("");
   // const [showPassword, setShowPassword] = useState(false);
 
+  // Was: Alert.alert("Success", response.data.message) then an immediate
+  // router.push right after — the alert barely had time to be read before
+  // navigation happened underneath it. Now the drawer holds the OTP-sent
+  // confirmation, and navigation only happens once the user taps Continue.
+  const [showOtpSentDrawer, setShowOtpSentDrawer] = useState(false);
+  const [otpSentMessage, setOtpSentMessage] = useState("");
+
   const isReady =
     loginMethod === "email" ? email.trim().length > 0 : phone.trim().length > 0;
 
   const handleLogin = async () => {
     if (isLoggingIn) return;
-    // try {
-    //   if (!email.trim()) {
-    //     return Alert.alert("Error", "Please enter your email");
-    //   }
-    //   setIsLoggingIn(true);
-    //   const response = await sendLoginOTP({
-    //     email: email.trim().toLowerCase(),
-    //   });
+    try {
+      if (!email.trim()) {
+        return Alert.alert("Error", "Please enter your email");
+      }
+      setIsLoggingIn(true);
+      const response = await sendLoginOTP({
+        email: email.trim().toLowerCase(),
+      });
 
-    //   Alert.alert("Success", response.data.message);
+      setOtpSentMessage(response.data.message || "OTP sent successfully.");
+      setShowOtpSentDrawer(true);
+    } catch (error) {
+      console.log("Login error:", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong",
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
-    //   router.push({
-    //     pathname: "/otpscreen",
-    //     params: {
-    //       contact: email.trim().toLowerCase(),
-    //       method: "email",
-    //       type: "login",
-    //     },
-    //   });
-    // } catch (error) {
-    //   console.log("Login error:", error);
-    //   Alert.alert(
-    //     "Error",
-    //     error?.response?.data?.message ||
-    //       error?.message ||
-    //       "Something went wrong",
-    //   );
-    // } finally {
-    //   setIsLoggingIn(false);
-    // }
-    router.push("home");
+  const handleContinueToOtp = () => {
+    setShowOtpSentDrawer(false);
+    router.push({
+      pathname: "/otpscreen",
+      params: {
+        contact: email.trim().toLowerCase(),
+        method: "email",
+        type: "login",
+      },
+    });
   };
 
   return (
@@ -203,7 +216,7 @@ export default function LoginScreen() {
                   <TextInput
                     value={phone}
                     onChangeText={setPhone}
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+91 1234567890"
                     placeholderTextColor={`#1F3D2B55`}
                     keyboardType="phone-pad"
                     className="ml-3 flex-1 text-[15px] text-pine"
@@ -211,45 +224,6 @@ export default function LoginScreen() {
                 </View>
               </>
             )}
-
-            {/* Password field */}
-            {/* <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-pine/50">
-              Password
-            </Text>
-            <View className="mb-2 flex-row items-center rounded-xl border border-pine/15 bg-white px-4 py-3.5">
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={"#1F3D2B"}
-                style={{ opacity: 0.5 }}
-              />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor={`#1F3D2B55`}
-                secureTextEntry={!showPassword}
-                className="ml-3 flex-1 text-[15px] text-pine"
-              />
-              <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={"#1F3D2B"}
-                  style={{ opacity: 0.5 }}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              className="mb-6 self-end"
-              activeOpacity={0.6}
-              onPress={() => router.push("/forgot-password")}
-            >
-              <Text className="text-xs font-semibold text-clay">
-                Forgot password?
-              </Text>
-            </TouchableOpacity> */}
 
             {/* The signature element: a rotated, engraved dog tag as the submit button */}
             <TouchableOpacity
@@ -331,6 +305,13 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SuccessDrawer
+        visible={showOtpSentDrawer}
+        onContinue={handleContinueToOtp}
+        message={otpSentMessage}
+        buttonLabel="Enter code"
+      />
     </View>
   );
 }

@@ -1,16 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  getPetById,
-  updatePet,
-  uploadPetImage,
-} from "../src/authApi";
-import { IMAGE_BASE_URL } from "../src/axios";
-import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -24,9 +17,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getPetById, updatePet, uploadPetImage } from "../src/authApi";
+import { IMAGE_BASE_URL } from "../src/axios";
 
 // TODO: replace with a real fetch — GET /pets/:petId — to pre-fill this form
-
 
 const BREEDS = [
   "Labrador Retriever",
@@ -115,8 +109,10 @@ export default function EditPetScreen() {
   const [landmark, setLandmark] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
-
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showBreedPicker, setShowBreedPicker] = useState(false);
+  const cameraPermission = ImagePicker.requestCameraPermissionsAsync();
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
   const pickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -138,6 +134,24 @@ export default function EditPetScreen() {
     }
   };
 
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission needed",
+        "We need camera access to take a pet photo.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
+    }
+  };
   const toggleWeightUnknown = () => {
     setWeightUnknown((prev) => {
       if (!prev) setWeight("");
@@ -158,7 +172,6 @@ export default function EditPetScreen() {
   };
   const loadPet = async () => {
     try {
-
       const response = await getPetById(petId);
 
       const pet = response.data.data.pet;
@@ -173,16 +186,9 @@ export default function EditPetScreen() {
       setDob(formattedDOB);
       setRegistrationNumber(pet.pet_uid);
       setWeight(String(pet.weight || ""));
-      setAvatar(
-        pet.pet_image
-          ? `${IMAGE_BASE_URL}${pet.pet_image}`
-          : null
-      );
-
+      setAvatar(pet.pet_image ? `${IMAGE_BASE_URL}${pet.pet_image}` : null);
     } catch (error) {
-
       console.log(error.response?.data || error);
-
     }
   };
 
@@ -200,7 +206,9 @@ export default function EditPetScreen() {
           type: "image/jpeg",
         });
 
-        const uploadResponse = await uploadPetImage(formData);
+        const uploadResponse = await uploadPetImage(formData, {
+          timeout: 50000,
+        });
 
         petImage = uploadResponse.data.data.pet_image;
         console.log("Uploaded Image:", uploadResponse.data);
@@ -229,23 +237,31 @@ export default function EditPetScreen() {
     } catch (error) {
       console.log(error.response?.data || error);
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Unable to update pet."
-      );
+      const message = !error.response
+        ? "Network error — check your connection and try again."
+        : error.response?.data?.message || "Unable to update pet.";
+
+      Alert.alert("Error", message);
     }
   };
-  
+
   // useEffect(() => {
   //   if (petId) {
   //     loadPet();
   //   }
   // }, [petId]);
 
+  const handleDateChange = (event, selectedDate) => {
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (event.type === "dismissed") return;
+    if (selectedDate)
+      setDob(selectedDate.toLocaleDateString("en-GB").replace(/\//g, "-"));
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadPet();
-    }, [])
+    }, []),
   );
 
   return (
@@ -274,7 +290,10 @@ export default function EditPetScreen() {
         >
           {/* ---------- Photo picker ---------- */}
           <View className="items-center pb-2 pt-6">
-            <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8}>
+            <TouchableOpacity
+              onPress={() => setShowPhotoOptions(true)}
+              activeOpacity={0.8}
+            >
               <View className="h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-pine/25 bg-white">
                 {avatar ? (
                   <Image
@@ -359,23 +378,40 @@ export default function EditPetScreen() {
             {/* DOB */}
             <View className="mb-5">
               <FieldLabel>Pet's DOB</FieldLabel>
-              <View className="flex-row items-center rounded-xl border border-pine/15 bg-white px-4 py-3.5">
-                <TextInput
-                  value={dob}
-                  onChangeText={setDob}
-                  placeholder="DD-MM-YYYY"
-                  placeholderTextColor="#1F3D2B55"
-                  className="flex-1 text-[15px] text-pine"
-                />
-                {/* TODO: swap for a real native date picker (@react-native-community/datetimepicker) */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setShowDatePicker(true)}
+                className="flex-row items-center justify-between rounded-xl border border-pine/15 bg-white px-4 py-3.5"
+              >
+                <Text
+                  className={
+                    dob ? "text-[15px] text-pine" : "text-[15px] text-pine/40"
+                  }
+                >
+                  {dob || "DD-MM-YYYY"}
+                </Text>
                 <Ionicons
                   name="calendar-outline"
                   size={18}
                   color="#1F3D2B"
                   style={{ opacity: 0.5 }}
                 />
-              </View>
+              </TouchableOpacity>
             </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={
+                  dob
+                    ? new Date(dob.split("-").reverse().join("-"))
+                    : new Date()
+                }
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                maximumDate={new Date()}
+                onChange={handleDateChange}
+              />
+            )}
 
             {/* Weight + Don't know */}
             <View className="mb-5">
@@ -405,7 +441,7 @@ export default function EditPetScreen() {
 
             {/* Location */}
             {/* TODO: wire real cascading Country -> State -> City data/API */}
-            <DropdownField
+            {/* <DropdownField
               label="Country"
               value={country}
               placeholder="Select country"
@@ -454,7 +490,7 @@ export default function EditPetScreen() {
               onChangeText={setZipCode}
               placeholder="Enter zip code"
               keyboardType="numeric"
-            />
+            /> */}
 
             {/* Registration number — read-only, generated at creation time */}
             <View className="mb-2">
@@ -547,6 +583,50 @@ export default function EditPetScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* ---------- Photo source action sheet ---------- */}
+      <Modal
+        visible={showPhotoOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPhotoOptions(false)}
+      >
+        <Pressable
+          className="flex-1 bg-pine/50"
+          onPress={() => setShowPhotoOptions(false)}
+        />
+        <View className="absolute bottom-0 left-0 right-0 rounded-t-[28px] bg-cream px-6 pt-5">
+          <SafeAreaView edges={["bottom"]}>
+            <Text className="mb-4 text-lg font-extrabold text-pine">
+              Update Pet Photo
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowPhotoOptions(false);
+                takePhoto();
+              }}
+              className="flex-row items-center gap-3 border-b border-pine/10 py-3.5"
+            >
+              <Ionicons name="camera-outline" size={20} color="#1F3D2B" />
+              <Text className="text-[15px] text-pine">Take Photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowPhotoOptions(false);
+                pickAvatar();
+              }}
+              className="flex-row items-center gap-3 py-3.5"
+            >
+              <Ionicons name="images-outline" size={20} color="#1F3D2B" />
+              <Text className="text-[15px] text-pine">Choose from Gallery</Text>
+            </TouchableOpacity>
           </SafeAreaView>
         </View>
       </Modal>

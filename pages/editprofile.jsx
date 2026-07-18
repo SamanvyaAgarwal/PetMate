@@ -1,14 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { getProfile, updateProfile } from "../src/authApi";
+import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { IMAGE_BASE_URL } from "../src/axios";
-import { uploadProfileImage } from "../src/authApi";
 import { useColorScheme } from "nativewind";
-import React, { useState, useEffect } from "react";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Modal,
@@ -20,10 +16,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getProfile, updateProfile, uploadProfileImage } from "../src/authApi";
+import { IMAGE_BASE_URL } from "../src/axios";
 
 // TODO: replace with real logged-in user data — GET /me
 // Shape mirrors the `users` table columns exactly
-
 
 // TODO: replace with a real country list (or a country-picker package)
 const COUNTRY_OPTIONS = [
@@ -85,11 +82,53 @@ export default function EditProfileScreen() {
   const [profileImage, setProfileImage] = useState(null);
   const [saving, setSaving] = useState(false);
   const [activePicker, setActivePicker] = useState(null); // "country" | "state" | null
-
+  const cameraPermission = ImagePicker.requestCameraPermissionsAsync();
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const isPhoneUser = form.login_method === "phone";
   const updateField = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const handleTakePhoto = async () => {
+    try {
+      // Ask for camera permission
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert("Permission Required", "Please allow camera access.");
+        return;
+      }
+
+      // Open camera
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const image = result.assets[0];
+
+      const formData = new FormData();
+
+      formData.append("profile_image", {
+        uri: image.uri,
+        name: "profile.jpg",
+        type: "image/jpeg",
+      });
+
+      const response = await uploadProfileImage(formData);
+
+      const imagePath = response.data.data.profile_image;
+
+      setProfileImage(`${IMAGE_BASE_URL}${imagePath}`);
+
+      Alert.alert("Success", "Profile image uploaded successfully.");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Failed to upload image.");
+    }
+  };
   const handlePickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -137,20 +176,14 @@ export default function EditProfileScreen() {
         profile_image: profileImage,
       });
 
-      Alert.alert(
-        "Success",
-        response.data.message
-      );
+      Alert.alert("Success", response.data.message);
 
       router.replace("/profile");
-
     } catch (error) {
-
       Alert.alert(
         "Error",
-        error.response?.data?.message || "Something went wrong"
+        error.response?.data?.message || "Something went wrong",
       );
-
     } finally {
       setSaving(false);
     }
@@ -162,10 +195,7 @@ export default function EditProfileScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert(
-          "Permission Required",
-          "Please allow gallery access."
-        );
+        Alert.alert("Permission Required", "Please allow gallery access.");
         return;
       }
 
@@ -193,15 +223,13 @@ export default function EditProfileScreen() {
 
       const imagePath = response.data.data.profile_image;
 
-      const fullImageUrl =
-        "http://103.59.75.177:5000" + imagePath;
+      const fullImageUrl = "http://103.59.75.177:5000" + imagePath;
 
       setProfileImage(fullImageUrl);
 
       setProfileImage(`${IMAGE_BASE_URL}${imagePath}`);
 
       Alert.alert("Success", "Profile image uploaded successfully.");
-
     } catch (error) {
       console.log(error);
       Alert.alert("Error", "Failed to upload image.");
@@ -225,7 +253,7 @@ export default function EditProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       loadProfile();
-    }, [])
+    }, []),
   );
   const loadProfile = async () => {
     try {
@@ -249,12 +277,9 @@ export default function EditProfileScreen() {
 
       if (user.profile_image) {
         setProfileImage(
-          user.profile_image
-            ? `${IMAGE_BASE_URL}${user.profile_image}`
-            : null
+          user.profile_image ? `${IMAGE_BASE_URL}${user.profile_image}` : null,
         );
       }
-
     } catch (error) {
       console.log(error);
     }
@@ -286,14 +311,14 @@ export default function EditProfileScreen() {
         <View className="items-center pb-6 pt-9">
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={handlePickImage}
+            onPress={() => setShowPhotoOptions(true)}
             className="relative"
           >
             <View className="h-32 w-32 items-center justify-center rounded-full bg-cream p-2 dark:bg-ink">
               <View className="h-full w-full items-center justify-center overflow-hidden rounded-full bg-pine/60">
                 {profileImage ? (
                   <Image
-                    source={{ uri: profileImage }} 
+                    source={{ uri: profileImage }}
                     style={{ width: "100%", height: "100%" }}
                   />
                 ) : (
@@ -568,6 +593,58 @@ export default function EditProfileScreen() {
                 ))}
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ---------- Photo source action sheet ---------- */}
+      <Modal
+        visible={showPhotoOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPhotoOptions(false)}
+      >
+        <View className="flex-1 justify-end bg-pine/40">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setShowPhotoOptions(false)}
+          />
+          <View className="rounded-t-[24px] bg-cream pb-6 pt-2 dark:bg-ink">
+            <View className="items-center py-3">
+              <View className="h-1.5 w-12 rounded-full bg-fog-200 dark:bg-cream/20" />
+            </View>
+
+            <Text className="px-6 pb-3 text-lg font-bold text-pine dark:text-cream">
+              Update Profile Photo
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowPhotoOptions(false);
+                handleTakePhoto();
+              }}
+              className="flex-row items-center gap-3 px-6 py-3.5"
+            >
+              <Ionicons name="camera-outline" size={20} color={iconColor} />
+              <Text className="text-base text-pine dark:text-cream">
+                Take Photo
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowPhotoOptions(false);
+                handlePickImage();
+              }}
+              className="flex-row items-center gap-3 px-6 py-3.5"
+            >
+              <Ionicons name="images-outline" size={20} color={iconColor} />
+              <Text className="text-base text-pine dark:text-cream">
+                Choose from Gallery
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

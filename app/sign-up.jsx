@@ -1,11 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Alert } from "react-native";
-import { sendSignupOTP } from "../src/authApi";
-// import { Image } from "expo-image";
-// import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
+import { Alert } from "react-native";
+import { sendSignupOTP } from "../src/authApi";
 
+import { SuccessDrawer } from "@/components/success-drawer";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -22,36 +21,16 @@ const SEAL_TICKS = Array.from({ length: 14 });
 
 export default function SignUpScreen() {
   const [signupMethod, setSignupMethod] = useState("email"); // "email" | "phone"
-  // const [avatar, setAvatar] = useState(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState("");
-  // const [password, setPassword] = useState("");
-  // const [confirmPassword, setConfirmPassword] = useState("");
-  // const [showPassword, setShowPassword] = useState(false);
 
-  // const pickAvatar = async () => {
-  //   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  //   if (status !== "granted") {
-  //     Alert.alert(
-  //       "Permission needed",
-  //       "We need access to your photos to set a profile picture.",
-  //     );
-  //     return;
-  //   }
-
-  //   const result = await ImagePicker.launchImageLibraryAsync({
-  //     mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  //     allowsEditing: true,
-  //     aspect: [1, 1],
-  //     quality: 0.8,
-  //   });
-
-  //   if (!result.canceled) {
-  //     setAvatar(result.assets[0].uri);
-  //   }
-  // };
+  // Was: Alert.alert("Success", response.data.message) immediately
+  // followed by router.push — same "alert gets cut off by navigation"
+  // issue as login.jsx. Drawer now holds this, Continue does the push.
+  const [showOtpSentDrawer, setShowOtpSentDrawer] = useState(false);
+  const [otpSentMessage, setOtpSentMessage] = useState("");
 
   const isReady =
     (signupMethod === "email"
@@ -59,11 +38,9 @@ export default function SignUpScreen() {
       : phone.trim().length > 0) && name.trim().length > 0;
 
   const handleSignUp = async () => {
-
     if (loading) return;
 
     try {
-
       setLoading(true);
 
       if (!name.trim()) {
@@ -79,30 +56,29 @@ export default function SignUpScreen() {
         email: email.trim().toLowerCase(),
       });
 
-      Alert.alert("Success", response.data.message);
-
-      router.push({
-        pathname: "/otpscreen",
-        params: {
-          name: name.trim(),
-          contact: email.trim().toLowerCase(),
-          method: "email",
-          type: "signup",
-        },
-      });
-
+      setOtpSentMessage(response.data.message || "OTP sent successfully.");
+      setShowOtpSentDrawer(true);
     } catch (error) {
-
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong"
+        error?.response?.data?.message || "Something went wrong",
       );
-
     } finally {
-
       setLoading(false);
-
     }
+  };
+
+  const handleContinueToOtp = () => {
+    setShowOtpSentDrawer(false);
+    router.push({
+      pathname: "/otpscreen",
+      params: {
+        name: name.trim(),
+        contact: email.trim().toLowerCase(),
+        method: "email",
+        type: "signup",
+      },
+    });
   };
 
   return (
@@ -161,36 +137,6 @@ export default function SignUpScreen() {
 
           {/* ---------- Cream sheet with the sign-up form ---------- */}
           <View className="flex-1 rounded-t-[32px] bg-cream px-8 pt-8">
-            {/* Profile picture picker */}
-            {/* <View className="mb-7 items-center">
-              <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8}>
-                <View className="h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-pine/25 bg-white">
-                  {avatar ? (
-                    <Image
-                      source={{ uri: avatar }}
-                      style={{ width: 96, height: 96, borderRadius: 48 }}
-                    />
-                  ) : (
-                    <Ionicons
-                      name="camera-outline"
-                      size={26}
-                      color={"#1F3D2B"}
-                      style={{ opacity: 0.35 }}
-                    />
-                  )}
-                </View>
-
-                
-                <View className="absolute -bottom-1 -right-1 h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-mustard">
-                  <Ionicons name="add" size={18} color={"#1F3D2B"} />
-                </View>
-              </TouchableOpacity>
-
-              <Text className="mt-3 text-xs font-semibold text-pine/40">
-                {avatar ? "Looking good!" : "Add a profile picture (optional)"}
-              </Text>
-            </View> */}
-
             {/* Name field */}
             <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-pine/50">
               Full name
@@ -305,56 +251,6 @@ export default function SignUpScreen() {
               </>
             )}
 
-            {/* Password field */}
-            {/* <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-pine/50">
-              Password
-            </Text>
-            <View className="mb-5 flex-row items-center rounded-xl border border-pine/15 bg-white px-4 py-3.5">
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={"#1F3D2B"}
-                style={{ opacity: 0.5 }}
-              />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor={`#1F3D2B55`}
-                secureTextEntry={!showPassword}
-                className="ml-3 flex-1 text-[15px] text-pine"
-              />
-              <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={"#1F3D2B"}
-                  style={{ opacity: 0.5 }}
-                />
-              </TouchableOpacity>
-            </View>
-
-           
-            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-pine/50">
-              Confirm password
-            </Text>
-            <View className="mb-6 flex-row items-center rounded-xl border border-pine/15 bg-white px-4 py-3.5">
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={"#1F3D2B"}
-                style={{ opacity: 0.5 }}
-              />
-              <TextInput
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="••••••••"
-                placeholderTextColor={`#1F3D2B55`}
-                secureTextEntry={!showPassword}
-                className="ml-3 flex-1 text-[15px] text-pine"
-              />
-            </View> */}
-
             {/* The signature element: a rotated, engraved dog tag as the submit button */}
             <TouchableOpacity
               onPress={handleSignUp}
@@ -429,6 +325,13 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SuccessDrawer
+        visible={showOtpSentDrawer}
+        onContinue={handleContinueToOtp}
+        message={otpSentMessage}
+        buttonLabel="Enter code"
+      />
     </View>
   );
 }

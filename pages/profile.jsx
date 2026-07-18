@@ -51,6 +51,9 @@ export default function ProfileScreen() {
   const contactValue = isPhoneUser ? safeUser.phone : safeUser.email;
   const contactIcon = isPhoneUser ? "call-outline" : "mail-outline";
 
+  // More than 2 pets → switch the grid to a horizontal scroller
+  const hasManyPets = pets.length > 2;
+
   // All address fields always shown — empty ones display a placeholder dash
   const addressFields = [
     { icon: "home-outline", label: "Address", value: safeUser.address },
@@ -211,82 +214,166 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* My Pets — existing pets first, "Add Pet" tile always last */}
-        <View className="mt-6 px-5">
-          <Text className="mb-2 ml-1 text-[13px] font-bold tracking-wide text-ink/50 dark:text-cream/50">
+        {/* My Pets — existing pets first, "Add Pet" tile always last.
+            Grid wraps for 0–2 pets; scrolls horizontally for 3+. */}
+        <View className="mt-6">
+          <Text className="mb-2 ml-1 px-5 text-[13px] font-bold tracking-wide text-ink/50 dark:text-cream/50">
             MY PETS
           </Text>
 
-          <View className="mt-1 flex-row flex-wrap gap-3">
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push("/addPet")}
-              className="w-[31%] overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+          {hasManyPets ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: SCREEN_PADDING,
+                gap: GRID_GAP,
+              }}
+              className="mt-1"
             >
-              <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/25">
-                  <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-mustard">
-                    <Ionicons name="add" size={26} color="#1F3D2B" />
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => router.push("/addPet")}
+                style={{ width: PET_CARD_WIDTH }}
+                className="overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+              >
+                <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/25">
+                    <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-mustard">
+                      <Ionicons name="add" size={26} color="#1F3D2B" />
+                    </View>
                   </View>
                 </View>
-              </View>
-              <View className="px-3.5 pb-3.5 pt-2.5">
-                <Text className="text-base font-bold text-pine dark:text-cream">
-                  Add Pet
-                </Text>
-                <Text className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50">
-                  Tap to add
-                </Text>
-                <View className="mt-2 self-start rounded-full bg-mustard/20 px-2.5 py-1">
-                  <Text className="text-[11px] font-semibold text-clay">
-                    New
+                <View className="px-3.5 pb-3.5 pt-2.5">
+                  <Text className="text-base font-bold text-pine dark:text-cream">
+                    Add Pet
                   </Text>
+                  <Text className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50">
+                    Tap to add
+                  </Text>
+                  <View className="mt-2 self-start rounded-full bg-mustard/20 px-2.5 py-1">
+                    <Text className="text-[11px] font-semibold text-clay">
+                      New
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            {pets.map((pet) => (
+              {pets.map((pet) => (
+                <TouchableOpacity
+                  key={pet.id}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/pet-profile",
+                      params: { petId: pet.id },
+                    })
+                  }
+                  style={{ width: PET_CARD_WIDTH }}
+                  className="overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+                >
+                  <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
+                    {pet.avatar ? (
+                      <Image
+                        source={{ uri: pet.avatar }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/20">
+                        <Ionicons name="paw" size={28} color="#1F3D2B" />
+                      </View>
+                    )}
+                  </View>
+                  <View className="px-3.5 pb-3.5 pt-2.5">
+                    <Text
+                      className="text-base font-bold text-pine dark:text-cream"
+                      numberOfLines={1}
+                    >
+                      {pet.name || "Unnamed"}
+                    </Text>
+                    <Text
+                      className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50"
+                      numberOfLines={1}
+                    >
+                      {pet.breed || "Breed not set"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View className="mt-1 flex-row flex-wrap gap-3 px-5">
               <TouchableOpacity
-                key={pet.id}
                 activeOpacity={0.7}
-                onPress={() =>
-                  router.push({
-                    pathname: "/pet-profile",
-                    params: { petId: pet.id },
-                  })
-                }
+                onPress={() => router.push("/addPet")}
                 className="w-[31%] overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
               >
                 <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
-                  {pet.avatar ? (
-                    <Image
-                      source={{ uri: pet.avatar }}
-                      style={{ width: "100%", height: "100%" }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/20">
-                      <Ionicons name="paw" size={28} color="#1F3D2B" />
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/25">
+                    <View className="h-[52px] w-[52px] items-center justify-center rounded-full bg-mustard">
+                      <Ionicons name="add" size={26} color="#1F3D2B" />
                     </View>
-                  )}
+                  </View>
                 </View>
                 <View className="px-3.5 pb-3.5 pt-2.5">
-                  <Text
-                    className="text-base font-bold text-pine dark:text-cream"
-                    numberOfLines={1}
-                  >
-                    {pet.name || "Unnamed"}
+                  <Text className="text-base font-bold text-pine dark:text-cream">
+                    Add Pet
                   </Text>
-                  <Text
-                    className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50"
-                    numberOfLines={1}
-                  >
-                    {pet.breed || "Breed not set"}
+                  <Text className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50">
+                    Tap to add
                   </Text>
+                  <View className="mt-2 self-start rounded-full bg-mustard/20 px-2.5 py-1">
+                    <Text className="text-[11px] font-semibold text-clay">
+                      New
+                    </Text>
+                  </View>
                 </View>
               </TouchableOpacity>
-            ))}
-          </View>
+
+              {pets.map((pet) => (
+                <TouchableOpacity
+                  key={pet.id}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/pet-profile",
+                      params: { petId: pet.id },
+                    })
+                  }
+                  className="w-[31%] overflow-hidden rounded-[18px] border border-fog-200 bg-cream dark:border-cream/10 dark:bg-pine"
+                >
+                  <View className="h-[110px] items-center justify-center bg-fog-50 dark:bg-ink">
+                    {pet.avatar ? (
+                      <Image
+                        source={{ uri: pet.avatar }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View className="h-16 w-16 items-center justify-center rounded-full bg-mustard/20">
+                        <Ionicons name="paw" size={28} color="#1F3D2B" />
+                      </View>
+                    )}
+                  </View>
+                  <View className="px-3.5 pb-3.5 pt-2.5">
+                    <Text
+                      className="text-base font-bold text-pine dark:text-cream"
+                      numberOfLines={1}
+                    >
+                      {pet.name || "Unnamed"}
+                    </Text>
+                    <Text
+                      className="mt-0.5 text-[13px] text-ink/50 dark:text-cream/50"
+                      numberOfLines={1}
+                    >
+                      {pet.breed || "Breed not set"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,15 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 
-import {
-  verifySignupOTP,
-  verifyLoginOTP,
-  sendSignupOTP,
-  sendLoginOTP,
-} from "../src/authApi";
+import { SuccessDrawer } from "@/components/success-drawer";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +15,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  sendLoginOTP,
+  sendSignupOTP,
+  verifyLoginOTP,
+  verifySignupOTP,
+} from "../src/authApi";
 
 // Thin radiating ticks around the paw seal — evokes a stamped kennel-club emblem
 const SEAL_TICKS = Array.from({ length: 14 });
@@ -38,6 +39,18 @@ export default function OtpScreen() {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef([]);
+
+  // Was: Alert.alert("Success", "OTP Sent Again") — no navigation follows
+  // resend, so this one just needs the message shown then dismissed.
+  const [showResendDrawer, setShowResendDrawer] = useState(false);
+
+  // Was: Alert.alert("Success", responseData?.message || "Authenticated
+  // successfully") immediately followed by router.replace — same
+  // "alert barely visible before navigating away" issue as login/signup.
+  // Continue on this drawer performs the deferred navigation instead.
+  const [showVerifiedDrawer, setShowVerifiedDrawer] = useState(false);
+  const [verifiedMessage, setVerifiedMessage] = useState("");
+  const [postVerifyDestination, setPostVerifyDestination] = useState("/home");
 
   useEffect(() => {
     if (secondsLeft === 0) return;
@@ -65,53 +78,33 @@ export default function OtpScreen() {
   };
 
   const handleResend = async () => {
-
     if (secondsLeft > 0) return;
 
     try {
-
       if (type === "signup") {
-
-        await sendSignupOTP({
-          name,
-          email: contact
-        });
-
+        await sendSignupOTP({ name, email: contact });
       } else {
-
-        await sendLoginOTP({
-          email: contact
-        });
-
+        await sendLoginOTP({ email: contact });
       }
 
       setSecondsLeft(30);
-
       setDigits(Array(6).fill(""));
-
       inputRefs.current[0]?.focus();
 
-      Alert.alert("Success", "OTP Sent Again");
-
+      setShowResendDrawer(true);
     } catch (error) {
-
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Failed to resend OTP"
+        error?.response?.data?.message || "Failed to resend OTP",
       );
-
     }
-
   };
 
   const handleVerify = async () => {
-   
-
     if (loading) return;
 
     setLoading(true);
     try {
-
       const otp = digits.join("");
 
       if (otp.length !== 6) {
@@ -121,78 +114,44 @@ export default function OtpScreen() {
       let response;
 
       if (type === "signup") {
-
-        console.log("Sending:", {
-          email: contact,
-          otp,
-        });
-
-        response = await verifySignupOTP({
-          email: contact,
-          otp,
-        });
-        console.log("FULL RESPONSE:");
-        console.log(JSON.stringify(response?.data, null, 2));
-
+        response = await verifySignupOTP({ email: contact, otp });
       } else {
-
-        console.log("Sending:", {
-          email: contact,
-          otp,
-        });
-
-        response = await verifyLoginOTP({
-          email: contact,
-          otp,
-        });
-        console.log("FULL RESPONSE:");
-        console.log(JSON.stringify(response?.data, null, 2));
-        console.log("DATA:", response?.data?.data);
+        response = await verifyLoginOTP({ email: contact, otp });
       }
-
 
       const responseData = response?.data ?? {};
       const payload = responseData?.data ?? {};
-      const {
-        token,
-        user,
-        is_profile_completed = false,
-      } = payload;
-      console.log("Token:", token);
-      console.log("User:", user);
-      console.log("Profile Completed:", is_profile_completed);
+      const { token, user, is_profile_completed = false } = payload;
 
       await AsyncStorage.setItem("token", token ?? "");
       await AsyncStorage.setItem("user", JSON.stringify(user ?? {}));
       await AsyncStorage.setItem(
         "is_profile_completed",
-        JSON.stringify(is_profile_completed)
+        JSON.stringify(is_profile_completed),
       );
-      Alert.alert("Success", responseData?.message || "Authenticated successfully");
-         
-      
-      if (is_profile_completed) {
-        router.replace("/home");
-      } else {
-        router.replace("/profile");
-      }
-      
-    } catch (error) {
 
-      console.log("===== SIGNUP VERIFY ERROR =====");
+      setPostVerifyDestination(is_profile_completed ? "/home" : "/profile");
+      setVerifiedMessage(
+        responseData?.message ||
+          (type === "signup" ? "Signup successful!" : "Login successful!"),
+      );
+      setShowVerifiedDrawer(true);
+    } catch (error) {
+      console.log("===== VERIFY ERROR =====");
       console.log("Message:", error.message);
       console.log("Status:", error?.response?.status);
       console.log("Response:", error?.response?.data);
-      console.log("===============================");
+      console.log("=========================");
 
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message || error.message
-      );
-
+      Alert.alert("Error", error?.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleContinueAfterVerify = () => {
+    setShowVerifiedDrawer(false);
+    router.replace(postVerifyDestination);
   };
 
   const isComplete = digits.every((d) => d !== "");
@@ -360,6 +319,20 @@ export default function OtpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SuccessDrawer
+        visible={showResendDrawer}
+        onContinue={() => setShowResendDrawer(false)}
+        message="OTP sent again — check your inbox."
+        buttonLabel="Got it"
+      />
+
+      <SuccessDrawer
+        visible={showVerifiedDrawer}
+        onContinue={handleContinueAfterVerify}
+        message={verifiedMessage}
+        buttonLabel="Continue"
+      />
     </View>
   );
 }

@@ -2,11 +2,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { addPet } from "../src/petApi";
-import {
-  uploadProfileImage,
-  uploadPetImage,
-} from "../src/authApi";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import {
@@ -22,6 +17,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { uploadPetImage } from "../src/authApi";
+import { addPet } from "../src/petApi";
 
 // TODO: replace with a real API call, e.g.:
 // const res = await fetch(`${API_BASE}/me/pets`, {
@@ -31,8 +28,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // const { serial } = await res.json();
 // The backend assigns and returns the serial only on successful creation.
 
-
-const GENDER_OPTIONS = ["Male", "Female", "Unknown"];
+const GENDER_OPTIONS = ["Male", "Female"];
 const CATEGORY_OPTIONS = ["Dog", "Cat", "Bird", "Rabbit", "Reptile", "Other"];
 const COUNTRY_OPTIONS = ["India", "United States", "United Kingdom", "Other"];
 
@@ -76,7 +72,7 @@ export default function AddPetScreen() {
       if (images.length > 0) {
         const formData = new FormData();
 
-        formData.append("image", {
+        formData.append("pet_image", {
           uri: images[0].uri,
           name: "pet.jpg",
           type: "image/jpeg",
@@ -103,16 +99,13 @@ export default function AddPetScreen() {
       Alert.alert("Success", response.data.message);
 
       router.back();
-
     } catch (error) {
-
       console.log(error.response?.data || error);
 
       Alert.alert(
         "Error",
-        error.response?.data?.message || "Something went wrong"
+        error.response?.data?.message || "Something went wrong",
       );
-
     } finally {
       setSaving(false);
     }
