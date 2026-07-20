@@ -15,7 +15,12 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { deletePet, getPetById } from "../src/authApi";
+import {
+  deletePet,
+  getPetById,
+  getVaccines,
+  deleteVaccine,
+} from "../src/authApi";
 
 import { BottomDrawer } from "@/components/bottom-drawer";
 import { AllergyForm } from "@/components/forms/allergy-form";
@@ -85,9 +90,13 @@ export default function PetProfileScreen() {
   const [pet, setPet] = useState(null);
   const [activeTab, setActiveTab] = useState("vaccines");
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [vaccines, setVaccines] = useState([]);
+  const [selectedVaccine, setSelectedVaccine] = useState(null);
+  const [showVaccineMenu, setShowVaccineMenu] = useState(false);
   // Which "Add Record" drawer is open, if any: one of the DRAWER_TITLES
   // keys, or null when every drawer is closed.
   const [openDrawer, setOpenDrawer] = useState(null);
+  const [drawerMode, setDrawerMode] = useState("add");
   const insets = useSafeAreaInsets();
 
   const petName = pet?.pet_name || pet?.name || "Pet";
@@ -109,6 +118,54 @@ export default function PetProfileScreen() {
     } catch (error) {
       console.log(error.response?.data || error);
     }
+  };
+  const loadVaccines = async () => {
+    console.log("loadVaccines called");
+
+    try {
+      const response = await getVaccines(petId);
+
+      console.log("API Success");
+      console.log(JSON.stringify(response.data, null, 2));
+
+      setVaccines(response.data.data);
+    } catch (error) {
+      console.log("API Error");
+      console.log(error.response?.data || error);
+    }
+  };
+  const handleDeleteVaccine = () => {
+    Alert.alert(
+      "Delete Vaccine",
+      "Are you sure you want to delete this vaccine?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteVaccine(selectedVaccine.id);
+
+              Alert.alert("Success", "Vaccine deleted successfully.");
+
+              setShowVaccineMenu(false);
+              setSelectedVaccine(null);
+
+              loadVaccines();
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error.response?.data?.message || "Something went wrong."
+              );
+            }
+          },
+        },
+      ]
+    );
   };
   const activeTabData = TABS.find((t) => t.key === activeTab);
 
@@ -156,6 +213,10 @@ export default function PetProfileScreen() {
 
   const handleAddRecord = () => {
     if (!DRAWER_TITLES[activeTab]) return;
+
+    setDrawerMode("add");
+    setSelectedVaccine(null);
+
     setOpenDrawer(activeTab);
   };
 
@@ -163,9 +224,11 @@ export default function PetProfileScreen() {
     useCallback(() => {
       if (petId) {
         loadPet();
+        loadVaccines();
       }
     }, [petId]),
   );
+  console.log("Vaccines state:", vaccines);
 
   if (!pet) {
     return (
@@ -353,21 +416,85 @@ export default function PetProfileScreen() {
         </View>
 
         {/* ---------- Tab content (empty state for now) ---------- */}
-        <View className="mt-10 items-center px-4 py-10">
-          <Ionicons
-            name={activeTabData.icon}
-            size={56}
-            color="#1F3D2B"
-            style={{ opacity: 0.2 }}
-          />
-          <Text className="mt-4 text-sm text-pine/40">
-            No{" "}
-            {activeTabData.key === "medical"
-              ? "medical history"
-              : activeTabData.label.toLowerCase()}{" "}
-            records yet.
-          </Text>
-        </View>
+        {activeTab === "vaccines" ? (
+          vaccines.length === 0 ? (
+            <View className="mt-10 items-center px-4 py-10">
+              <Ionicons
+                name="flask-outline"
+                size={56}
+                color="#1F3D2B"
+                style={{ opacity: 0.2 }}
+              />
+              <Text className="mt-4 text-sm text-pine/40">
+                No vaccine records yet.
+              </Text>
+            </View>
+          ) : (
+            <View className="mt-6 px-4">
+              {vaccines.map((item) => (
+                <View
+                  key={item.id}
+                  className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
+                >
+                  <View className="flex-row items-center justify-between">
+
+                    <Text className="text-lg font-bold text-pine">
+                      💉 {item.vaccine_name}
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedVaccine(item);
+                        setShowVaccineMenu(true);
+                      }}
+                    >
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={20}
+                        color="#1F3D2B"
+                      />
+                    </TouchableOpacity>
+
+                  </View>
+
+                  <Text className="mt-2 text-pine">
+                    Vaccination Date:
+                  </Text>
+
+                  <Text className="text-pine/60">
+                    {new Date(item.vaccination_date).toLocaleDateString("en-GB")}
+                  </Text>
+
+                  <Text className="mt-3 text-pine">
+                    Due Date:
+                  </Text>
+
+                  <Text className="text-pine/60">
+                    {item.next_due_date
+                      ? new Date(item.next_due_date).toLocaleDateString("en-GB")
+                      : "Not Set"}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )
+        ) : (
+          <View className="mt-10 items-center px-4 py-10">
+            <Ionicons
+              name={activeTabData.icon}
+              size={56}
+              color="#1F3D2B"
+              style={{ opacity: 0.2 }}
+            />
+            <Text className="mt-4 text-sm text-pine/40">
+              No{" "}
+              {activeTabData.key === "medical"
+                ? "medical history"
+                : activeTabData.label.toLowerCase()}{" "}
+              records yet.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* ---------- Fixed Add Record button — hidden on Medical Hx ---------- */}
@@ -395,7 +522,13 @@ export default function PetProfileScreen() {
         onClose={closeDrawer}
         title={DRAWER_TITLES.vaccines}
       >
-        <VaccineRecordForm petId={petId} onClose={closeDrawer} />
+        <VaccineRecordForm
+          petId={petId}
+          onClose={closeDrawer}
+          onSuccess={loadVaccines}
+          mode={drawerMode}
+          vaccine={selectedVaccine}
+        />
       </BottomDrawer>
 
       <BottomDrawer
@@ -421,6 +554,48 @@ export default function PetProfileScreen() {
       >
         <WalkForm petId={petId} onClose={closeDrawer} />
       </BottomDrawer>
+      <Modal
+        visible={showVaccineMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVaccineMenu(false)}
+      >
+        <Pressable
+          className="flex-1 justify-center items-center bg-black/30"
+          onPress={() => setShowVaccineMenu(false)}
+        >
+          <View className="w-64 rounded-2xl bg-white p-4">
+
+            <TouchableOpacity
+              className="py-3"
+              onPress={() => {
+                setShowVaccineMenu(false);
+
+                setDrawerMode("edit");
+                setOpenDrawer("vaccines");
+              }}
+            >
+              <Text className="text-base font-semibold text-pine">
+                ✏️ Edit
+              </Text>
+            </TouchableOpacity>
+
+            <View className="h-px bg-gray-200" />
+
+            <TouchableOpacity
+              className="py-3"
+              onPress={() => {
+                handleDeleteVaccine();
+              }}
+            >
+              <Text className="text-base font-semibold text-red-500">
+                🗑 Delete
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

@@ -61,17 +61,16 @@ export function DateField({
 }) {
   const [showPicker, setShowPicker] = useState(false);
 
-  const formatDate = (date) =>
-    date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+  const formatDate = (date) => {
+    return date.toISOString().split("T")[0];
+  };
 
   const handleChange = (event, selectedDate) => {
     if (Platform.OS === "android") setShowPicker(false);
     if (event.type === "dismissed") return;
-    if (selectedDate) onChangeText(formatDate(selectedDate));
+    if (selectedDate) {
+      onChangeText(selectedDate.toISOString().split("T")[0]);
+    }
   };
 
   return (

@@ -61,3 +61,17 @@ export const deletePet = (petId) => {
 export const updatePet = (petId, data) => {
     return api.put(`/pets/${petId}`, data);
 };
+
+export const addVaccine = (petUid, data) =>
+    api.post(`/pets/${petUid}/vaccines`, data);
+
+export const getVaccines = (petUid) => {
+    return api.get(`/pets/${petUid}/vaccines`);
+};
+// export const deleteVaccine = (petUid, vaccineId) =>
+//     api.delete(`/pets/${petUid}/vaccines/${vaccineId}`);
+export const deleteVaccine = (id) =>
+    api.delete(`/vaccines/${id}`);
+
+export const updateVaccine = (id, data) =>
+    api.put(`/vaccines/${id}`, data);

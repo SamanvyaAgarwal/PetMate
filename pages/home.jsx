@@ -300,7 +300,7 @@ export default function HomeScreen() {
       const response = await getBanners();
 
       setBanners(response.data.data.banners);
-    } catch (error) {
+    } catch (error) { 
       console.log(error.response?.data || error);
     }
   };

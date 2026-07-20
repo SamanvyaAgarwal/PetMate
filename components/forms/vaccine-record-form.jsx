@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { addVaccine, updateVaccine } from "@/src/authApi";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -30,16 +31,39 @@ const VACCINE_OPTIONS = [
 
 // Renders inside <BottomDrawer title="Add Vaccine Record">.
 // `onClose` dismisses the drawer (replaces the old router.back()).
-export function VaccineRecordForm({ petId, onClose }) {
+export function VaccineRecordForm({
+  petId,
+  onClose,
+  onSuccess,
+  mode = "add",
+  vaccine = null,
+}) {
   const insets = useSafeAreaInsets();
 
   const [vaccineName, setVaccineName] = useState("");
+  const [loading, setLoading] = useState(false);
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [images, setImages] = useState([]);
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderDate, setReminderDate] = useState("");
   const [showVaccinePicker, setShowVaccinePicker] = useState(false);
+
+  useEffect(() => {
+    if (mode === "edit" && vaccine) {
+      setVaccineName(vaccine.vaccine_name);
+      setDate(vaccine.vaccination_date);
+      setNotes(vaccine.notes || "");
+
+      if (vaccine.next_due_date) {
+        setReminderOn(true);
+        setReminderDate(vaccine.next_due_date);
+      } else {
+        setReminderOn(false);
+        setReminderDate("");
+      }
+    }
+  }, [mode, vaccine]);
 
   const pickImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -59,6 +83,15 @@ export function VaccineRecordForm({ petId, onClose }) {
       setImages((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
     }
   };
+  const formatDateForApi = (dateString) => {
+    console.log("Received Date:", dateString);
+
+    const date = new Date(dateString);
+
+    console.log("JS Date:", date);
+
+    return date.toISOString().split("T")[0];
+  };
 
   const removeImage = (index) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
@@ -75,25 +108,104 @@ export function VaccineRecordForm({ petId, onClose }) {
     setReminderDate("");
   };
 
-  const handleAddMore = () => {
+  const handleAddMore = async () => {
     if (!isValid) {
       Alert.alert(
         "Missing info",
-        "Please fill in the required fields before adding another record.",
+        "Please fill in the required fields before adding another record."
       );
       return;
     }
-    // TODO: save this vaccine record via the real API (petId, vaccineName, date, notes, images, reminder)
-    resetForm();
+
+    try {
+      setLoading(true);
+     const payload = {
+  vaccine_name: vaccineName,
+  vaccination_date: formatDateForApi(date),
+  next_due_date: reminderOn
+    ? formatDateForApi(reminderDate)
+    : null,
+  doctor_name: "",
+  hospital_name: "",
+  notes,
+};
+
+      const response = await addVaccine(petId, payload);
+
+      Alert.alert("Success", response.data.message);
+
+      resetForm();
+
+      if (onSuccess) {
+        await onSuccess();
+      }
+    } catch (error) {
+      console.log(error.response?.data || error);
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     if (!isValid) {
       Alert.alert("Missing info", "Please fill in the required fields.");
       return;
     }
-    // TODO: save this vaccine record via the real API
-    onClose();
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        vaccine_name: vaccineName,
+        vaccination_date: formatDateForApi(date),
+        next_due_date: reminderOn
+          ? formatDateForApi(reminderDate)
+          : null,
+        notes,
+        doctor_name: "",
+        hospital_name: "",
+      };
+      console.log("Payload:", payload);
+
+      let response;
+
+      if (mode === "edit") {
+        response = await updateVaccine(vaccine.id, payload);
+      } else {
+        response = await addVaccine(petId, payload);
+      }
+
+      console.log("API Response:", response.data);
+
+      Alert.alert(
+        "Success",
+        mode === "edit"
+          ? "Vaccine updated successfully."
+          : "Vaccine added successfully."
+      );
+
+      resetForm();
+
+      if (onSuccess) {
+        await onSuccess();
+      }
+
+      onClose();
+    } catch (error) {
+      console.log(error.response?.data || error);
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -167,14 +279,27 @@ export function VaccineRecordForm({ petId, onClose }) {
           activeOpacity={0.85}
           className="flex-1 items-center justify-center rounded-2xl border-2 border-mustard py-4"
         >
-          <Text className="text-base font-extrabold text-pine">Add More</Text>
+          <Text className="text-base font-extrabold text-pine">
+            {loading
+              ? "Saving..."
+              : mode === "edit"
+                ? "Update"
+                : "Proceed"}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleProceed}
           activeOpacity={0.85}
           className="flex-1 items-center justify-center rounded-2xl bg-mustard py-4"
         >
-          <Text className="text-base font-extrabold text-pine">Proceed</Text>
+          {/* <Text className="text-base font-extrabold text-pine">Proceed</Text> */}
+          <Text className="text-base font-extrabold text-pine">
+            {loading
+              ? "Saving..."
+              : mode === "edit"
+                ? "Update"
+                : "Proceed"}
+          </Text>
         </TouchableOpacity>
       </View>
 
