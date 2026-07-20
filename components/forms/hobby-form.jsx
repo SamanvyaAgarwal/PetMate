@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { addHobby } from "@/src/authApi";
 
 import {
   DropdownField,
@@ -26,26 +27,56 @@ const STAR_VALUES = [1, 2, 3, 4, 5];
 
 // Renders inside <BottomDrawer title="Add Hobby">.
 // `onClose` dismisses the drawer (replaces the old router.back()).
-export function HobbyForm({ petId, onClose }) {
+export function HobbyForm({ petId, onClose, onSuccess }) {
   const insets = useSafeAreaInsets();
 
   const [hobbyName, setHobbyName] = useState("");
   const [interestLevel, setInterestLevel] = useState(1);
   const [notes, setNotes] = useState("");
   const [showHobbyPicker, setShowHobbyPicker] = useState(false);
-
+  const resetForm = () => {
+    setHobbyName("");
+    setInterestLevel(1);
+    setNotes("");
+  };
   const isValid = hobbyName.trim().length > 0 && interestLevel > 0;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isValid) {
       Alert.alert(
         "Missing info",
-        "Please select a hobby and an interest level.",
+        "Please select a hobby and an interest level."
       );
       return;
     }
-    // TODO: save this hobby record via the real API (petId, hobbyName, interestLevel, notes)
-    onClose();
+
+    try {
+      console.log("Pet ID:", petId);
+
+      const payload = {
+        hobby_name: hobbyName,
+        rating: interestLevel,
+      };
+
+      console.log("Payload:", payload);
+
+      await addHobby(petId, payload);
+
+      Alert.alert("Success", "Hobby added successfully.");
+
+      resetForm();
+
+      if (onSuccess) {
+        await onSuccess();
+      }
+
+      onClose();
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Something went wrong."
+      );
+    }
   };
 
   return (

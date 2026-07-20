@@ -23,6 +23,8 @@ import {
   deleteVaccine,
   getAllergies,
   deleteAllergy,
+  getHobbies,
+  deleteHobby,
 } from "../src/authApi";
 
 import { BottomDrawer } from "@/components/bottom-drawer";
@@ -96,8 +98,12 @@ export default function PetProfileScreen() {
   const [vaccines, setVaccines] = useState([]);
   const [selectedVaccine, setSelectedVaccine] = useState(null);
   const [showVaccineMenu, setShowVaccineMenu] = useState(false);
+  const [hobbies, setHobbies] = useState([]);
   const [selectedAllergy, setSelectedAllergy] = useState(null);
   const [showAllergyMenu, setShowAllergyMenu] = useState(false);
+  const [selectedHobby, setSelectedHobby] = useState(null);
+  const [showHobbyMenu, setShowHobbyMenu] = useState(false);
+  
   const [allergies, setAllergies] = useState([]);
   // Which "Add Record" drawer is open, if any: one of the DRAWER_TITLES
   // keys, or null when every drawer is closed.
@@ -151,6 +157,17 @@ export default function PetProfileScreen() {
       console.log("Allergies Array:", response.data.data.allergies);
     } catch (error) {
       console.log(error.response?.data || error);
+    }
+  };
+  const loadHobbies = async () => {
+    try {
+      const response = await getHobbies(petId);
+
+      console.log("Hobby API:", response.data);
+
+      setHobbies(response.data.data.hobbies);
+    } catch (error) {
+      console.log("Load Hobby Error:", error);
     }
   };
   const handleDeleteVaccine = () => {
@@ -208,6 +225,39 @@ export default function PetProfileScreen() {
               setSelectedAllergy(null);
 
               loadAllergies();
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error.response?.data?.message || "Something went wrong."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+  const handleDeleteHobby = () => {
+    Alert.alert(
+      "Delete Hobby",
+      "Are you sure you want to delete this hobby?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteHobby(selectedHobby.id);
+
+              Alert.alert("Success", "Hobby deleted successfully.");
+
+              setShowHobbyMenu(false);
+              setSelectedHobby(null);
+
+              loadHobbies();
             } catch (error) {
               Alert.alert(
                 "Error",
@@ -278,6 +328,7 @@ export default function PetProfileScreen() {
         loadPet();
         loadVaccines();
         loadAllergies();
+        loadHobbies();
       }
     }, [petId]),
   );
@@ -573,23 +624,79 @@ export default function PetProfileScreen() {
               ))}
             </View>
           )
-        ) : (
-          <View className="mt-10 items-center px-4 py-10">
-            <Ionicons
-              name={activeTabData.icon}
-              size={56}
-              color="#1F3D2B"
-              style={{ opacity: 0.2 }}
-            />
-            <Text className="mt-4 text-sm text-pine/40">
-              No{" "}
-              {activeTabData.key === "medical"
-                ? "medical history"
-                : activeTabData.label.toLowerCase()}{" "}
-              records yet.
-            </Text>
-          </View>
-        )}
+          ) : activeTab === "hobbies" ? (
+            hobbies.length === 0 ? (
+              <View className="mt-10 items-center px-4 py-10">
+                <Ionicons
+                  name="heart-outline"
+                  size={56}
+                  color="#1F3D2B"
+                  style={{ opacity: 0.2 }}
+                />
+                <Text className="mt-4 text-sm text-pine/40">
+                  No hobby records yet.
+                </Text>
+              </View>
+            ) : (
+              <View className="mt-6 px-4">
+                {hobbies.map((item) => (
+                  <View
+                    key={item.id}
+                    className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View>
+                        <Text className="text-lg font-bold text-pine">
+                          ❤️ {item.hobby_name}
+                        </Text>
+
+                        <View className="mt-2 flex-row">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Ionicons
+                              key={star}
+                              name={star <= item.rating ? "star" : "star-outline"}
+                              size={18}
+                              color="#D9A441"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </View>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedHobby(item);
+                          setShowHobbyMenu(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="ellipsis-vertical"
+                          size={20}
+                          color="#1F3D2B"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )
+          ) : (
+            <View className="mt-10 items-center px-4 py-10">
+              <Ionicons
+                name={activeTabData.icon}
+                size={56}
+                color="#1F3D2B"
+                style={{ opacity: 0.2 }}
+              />
+              <Text className="mt-4 text-sm text-pine/40">
+                No{" "}
+                {activeTabData.key === "medical"
+                  ? "medical history"
+                  : activeTabData.label.toLowerCase()}{" "}
+                records yet.
+              </Text>
+            </View>
+          ) }
       </ScrollView>
 
       {/* ---------- Fixed Add Record button — hidden on Medical Hx ---------- */}
@@ -643,7 +750,11 @@ export default function PetProfileScreen() {
         onClose={closeDrawer}
         title={DRAWER_TITLES.hobbies}
       >
-        <HobbyForm petId={petId} onClose={closeDrawer} />
+        <HobbyForm
+          petId={petId}
+          onClose={closeDrawer}
+          onSuccess={loadHobbies}
+        />
       </BottomDrawer>
 
       <BottomDrawer
@@ -725,6 +836,46 @@ export default function PetProfileScreen() {
               className="py-3"
               onPress={() => {
                 handleDeleteAllergy();
+              }}
+            >
+              <Text className="text-base font-semibold text-red-500">
+                🗑 Delete
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </Pressable>
+      </Modal>
+      <Modal
+        visible={showHobbyMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHobbyMenu(false)}
+      >
+        <Pressable
+          className="flex-1 justify-center items-center bg-black/30"
+          onPress={() => setShowHobbyMenu(false)}
+        >
+          <View className="w-64 rounded-2xl bg-white p-4">
+
+            <TouchableOpacity
+              className="py-3"
+              onPress={() => {
+                setShowHobbyMenu(false);
+                // We'll add Edit later
+              }}
+            >
+              <Text className="text-base font-semibold text-pine">
+                ✏️ Edit
+              </Text>
+            </TouchableOpacity>
+
+            <View className="h-px bg-gray-200" />
+
+            <TouchableOpacity
+              className="py-3"
+              onPress={() => {
+                handleDeleteHobby();
               }}
             >
               <Text className="text-base font-semibold text-red-500">

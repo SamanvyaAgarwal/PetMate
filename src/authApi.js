@@ -88,3 +88,14 @@ export const updateAllergy = (id, data) =>
 
 export const deleteAllergy = (id) =>
     api.delete(`/allergies/${id}`);
+export const addHobby = (petUid, data) =>
+    api.post(`/pets/${petUid}/hobbies`, data);
+
+export const getHobbies = (petUid) =>
+    api.get(`/pets/${petUid}/hobbies`);
+
+export const updateHobby = (id, data) =>
+    api.put(`/hobbies/${id}`, data);
+
+export const deleteHobby = (id) =>
+    api.delete(`/hobbies/${id}`);
