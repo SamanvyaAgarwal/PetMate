@@ -75,3 +75,16 @@ export const deleteVaccine = (id) =>
 
 export const updateVaccine = (id, data) =>
     api.put(`/vaccines/${id}`, data);
+
+// Allergies
+export const addAllergy = (petUid, data) =>
+    api.post(`/pets/${petUid}/allergies`, data);
+
+export const getAllergies = (petUid) =>
+    api.get(`/pets/${petUid}/allergies`);
+
+export const updateAllergy = (id, data) =>
+    api.put(`/allergies/${id}`, data);
+
+export const deleteAllergy = (id) =>
+    api.delete(`/allergies/${id}`);

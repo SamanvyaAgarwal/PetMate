@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
+
 import {
   Alert,
   Modal,
@@ -20,6 +21,8 @@ import {
   getPetById,
   getVaccines,
   deleteVaccine,
+  getAllergies,
+  deleteAllergy,
 } from "../src/authApi";
 
 import { BottomDrawer } from "@/components/bottom-drawer";
@@ -93,6 +96,9 @@ export default function PetProfileScreen() {
   const [vaccines, setVaccines] = useState([]);
   const [selectedVaccine, setSelectedVaccine] = useState(null);
   const [showVaccineMenu, setShowVaccineMenu] = useState(false);
+  const [selectedAllergy, setSelectedAllergy] = useState(null);
+  const [showAllergyMenu, setShowAllergyMenu] = useState(false);
+  const [allergies, setAllergies] = useState([]);
   // Which "Add Record" drawer is open, if any: one of the DRAWER_TITLES
   // keys, or null when every drawer is closed.
   const [openDrawer, setOpenDrawer] = useState(null);
@@ -134,6 +140,19 @@ export default function PetProfileScreen() {
       console.log(error.response?.data || error);
     }
   };
+  const loadAllergies = async () => {
+    try {
+      const response = await getAllergies(petId);
+
+      console.log("Allergy API Response:", response.data);
+
+      setAllergies(response.data.data.allergies);
+
+      console.log("Allergies Array:", response.data.data.allergies);
+    } catch (error) {
+      console.log(error.response?.data || error);
+    }
+  };
   const handleDeleteVaccine = () => {
     Alert.alert(
       "Delete Vaccine",
@@ -156,6 +175,39 @@ export default function PetProfileScreen() {
               setSelectedVaccine(null);
 
               loadVaccines();
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error.response?.data?.message || "Something went wrong."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+  const handleDeleteAllergy = () => {
+    Alert.alert(
+      "Delete Allergy",
+      "Are you sure you want to delete this allergy?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAllergy(selectedAllergy.id);
+
+              Alert.alert("Success", "Allergy deleted successfully.");
+
+              setShowAllergyMenu(false);
+              setSelectedAllergy(null);
+
+              loadAllergies();
             } catch (error) {
               Alert.alert(
                 "Error",
@@ -225,6 +277,7 @@ export default function PetProfileScreen() {
       if (petId) {
         loadPet();
         loadVaccines();
+        loadAllergies();
       }
     }, [petId]),
   );
@@ -437,7 +490,6 @@ export default function PetProfileScreen() {
                   className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
                 >
                   <View className="flex-row items-center justify-between">
-
                     <Text className="text-lg font-bold text-pine">
                       💉 {item.vaccine_name}
                     </Text>
@@ -454,7 +506,6 @@ export default function PetProfileScreen() {
                         color="#1F3D2B"
                       />
                     </TouchableOpacity>
-
                   </View>
 
                   <Text className="mt-2 text-pine">
@@ -474,6 +525,50 @@ export default function PetProfileScreen() {
                       ? new Date(item.next_due_date).toLocaleDateString("en-GB")
                       : "Not Set"}
                   </Text>
+                </View>
+              ))}
+            </View>
+          )
+        ) : activeTab === "allergies" ? (
+          allergies.length === 0 ? (
+            <View className="mt-10 items-center px-4 py-10">
+              <Ionicons
+                name="alert-circle-outline"
+                size={56}
+                color="#1F3D2B"
+                style={{ opacity: 0.2 }}
+              />
+              <Text className="mt-4 text-sm text-pine/40">
+                No allergy records yet.
+              </Text>
+            </View>
+          ) : (
+            <View className="mt-6 px-4">
+              {allergies.map((item) => (
+                <View
+                  key={item.id}
+                  className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
+                >
+                  <View className="flex-row items-center justify-between">
+
+                    <Text className="text-lg font-bold text-pine">
+                      🤧 {item.allergy_name}
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedAllergy(item);
+                        setShowAllergyMenu(true);
+                      }}
+                    >
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={20}
+                        color="#1F3D2B"
+                      />
+                    </TouchableOpacity>
+
+                  </View>
                 </View>
               ))}
             </View>
@@ -536,7 +631,11 @@ export default function PetProfileScreen() {
         onClose={closeDrawer}
         title={DRAWER_TITLES.allergies}
       >
-        <AllergyForm petId={petId} onClose={closeDrawer} />
+        <AllergyForm
+          petId={petId}
+          onClose={closeDrawer}
+          onSuccess={loadAllergies}
+        />
       </BottomDrawer>
 
       <BottomDrawer
@@ -586,6 +685,46 @@ export default function PetProfileScreen() {
               className="py-3"
               onPress={() => {
                 handleDeleteVaccine();
+              }}
+            >
+              <Text className="text-base font-semibold text-red-500">
+                🗑 Delete
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </Pressable>
+      </Modal>
+      <Modal
+        visible={showAllergyMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAllergyMenu(false)}
+      >
+        <Pressable
+          className="flex-1 justify-center items-center bg-black/30"
+          onPress={() => setShowAllergyMenu(false)}
+        >
+          <View className="w-64 rounded-2xl bg-white p-4">
+
+            <TouchableOpacity
+              className="py-3"
+              onPress={() => {
+                setShowAllergyMenu(false);
+                // We'll add Edit later
+              }}
+            >
+              <Text className="text-base font-semibold text-pine">
+                ✏️ Edit
+              </Text>
+            </TouchableOpacity>
+
+            <View className="h-px bg-gray-200" />
+
+            <TouchableOpacity
+              className="py-3"
+              onPress={() => {
+                handleDeleteAllergy();
               }}
             >
               <Text className="text-base font-semibold text-red-500">

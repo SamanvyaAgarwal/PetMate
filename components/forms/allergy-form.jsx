@@ -2,6 +2,10 @@ import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  addAllergy,
+  updateAllergy,
+} from "@/src/authApi";
 
 import {
   DropdownField,
@@ -25,10 +29,15 @@ const ALLERGY_OPTIONS = [
 
 // Renders inside <BottomDrawer title="Add Allergy">.
 // `onClose` dismisses the drawer (replaces the old router.back()).
-export function AllergyForm({ petId, onClose }) {
+export function AllergyForm({
+  petId,
+  onClose,
+  onSuccess,
+}) {
   const insets = useSafeAreaInsets();
 
   const [allergyName, setAllergyName] = useState("");
+  const [loading, setLoading] = useState(false);
   const [reaction, setReaction] = useState("");
   const [images, setImages] = useState([]);
   const [showAllergyPicker, setShowAllergyPicker] = useState(false);
@@ -76,13 +85,55 @@ export function AllergyForm({ petId, onClose }) {
     resetForm();
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
+    console.log("Proceed button pressed");
+
     if (!isValid) {
+      console.log("Validation failed");
       Alert.alert("Missing info", "Please select an allergy name.");
       return;
     }
-    // TODO: save this allergy record via the real API
-    onClose();
+
+    try {
+      console.log("Inside try block");
+      setLoading(true);
+
+      const payload = {
+        allergy_name: allergyName,
+        severity: "Low",
+        symptoms: reaction,
+        treatment: "",
+        notes: "",
+      };
+
+      console.log("Payload:", payload);
+
+      const response = await addAllergy(petId, payload);
+
+      console.log("API Success:", response.data);
+
+      Alert.alert("Success", "Allergy added successfully.");
+
+      resetForm();
+
+      if (onSuccess) {
+        await onSuccess();
+      }
+
+      onClose();
+    } catch (error) {
+      console.log("Catch block");
+      console.log(error);
+      console.log(error.response?.data);
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || error.message
+      );
+    } finally {
+      console.log("Finally block");
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,7 +181,9 @@ export function AllergyForm({ petId, onClose }) {
           activeOpacity={0.85}
           className="flex-1 items-center justify-center rounded-2xl bg-mustard py-4"
         >
-          <Text className="text-base font-extrabold text-pine">Proceed</Text>
+          <Text className="text-base font-extrabold text-pine">
+            {loading ? "Saving..." : "Proceed"}
+          </Text>
         </TouchableOpacity>
       </View>
 
