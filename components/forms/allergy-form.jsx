@@ -1,18 +1,17 @@
+import { addAllergy } from "@/src/authApi";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  addAllergy,
-  updateAllergy,
-} from "@/src/authApi";
 
+import { ErrorDrawer } from "@/components/error-drawer";
 import {
   DropdownField,
   ImageUploadField,
   OptionPickerModal,
   TextAreaField,
 } from "@/components/form-fields";
+import { SuccessDrawer } from "@/components/success-drawer";
 
 const ALLERGY_OPTIONS = [
   "Pollen",
@@ -29,11 +28,7 @@ const ALLERGY_OPTIONS = [
 
 // Renders inside <BottomDrawer title="Add Allergy">.
 // `onClose` dismisses the drawer (replaces the old router.back()).
-export function AllergyForm({
-  petId,
-  onClose,
-  onSuccess,
-}) {
+export function AllergyForm({ petId, onClose, onSuccess }) {
   const insets = useSafeAreaInsets();
 
   const [allergyName, setAllergyName] = useState("");
@@ -41,14 +36,20 @@ export function AllergyForm({
   const [reaction, setReaction] = useState("");
   const [images, setImages] = useState([]);
   const [showAllergyPicker, setShowAllergyPicker] = useState(false);
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
 
   const pickImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "We need access to your photos to upload images.",
-      );
+      showError("We need access to your photos to upload images.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -75,10 +76,7 @@ export function AllergyForm({
 
   const handleAddMore = () => {
     if (!isValid) {
-      Alert.alert(
-        "Missing info",
-        "Please select an allergy name before adding another record.",
-      );
+      showError("Please select an allergy name before adding another record.");
       return;
     }
     // TODO: save this allergy record via the real API (petId, allergyName, reaction, images)
@@ -90,7 +88,7 @@ export function AllergyForm({
 
     if (!isValid) {
       console.log("Validation failed");
-      Alert.alert("Missing info", "Please select an allergy name.");
+      showError("Please select an allergy name.");
       return;
     }
 
@@ -112,24 +110,20 @@ export function AllergyForm({
 
       console.log("API Success:", response.data);
 
-      Alert.alert("Success", "Allergy added successfully.");
-
       resetForm();
 
       if (onSuccess) {
         await onSuccess();
       }
 
-      onClose();
+      setSuccessMessage("Allergy added successfully.");
+      setShowSuccessDrawer(true);
     } catch (error) {
       console.log("Catch block");
       console.log(error);
       console.log(error.response?.data);
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || error.message
-      );
+      showError(error.response?.data?.message || error.message);
     } finally {
       console.log("Finally block");
       setLoading(false);
@@ -197,6 +191,19 @@ export function AllergyForm({
           setShowAllergyPicker(false);
         }}
         onClose={() => setShowAllergyPicker(false)}
+      />
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          onClose();
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
       />
     </>
   );

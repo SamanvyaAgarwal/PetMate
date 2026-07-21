@@ -1,10 +1,8 @@
+import { ErrorDrawer } from "@/components/error-drawer";
+import { SuccessDrawer } from "@/components/success-drawer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert } from "react-native";
-import { sendSignupOTP } from "../src/authApi";
-
-import { SuccessDrawer } from "@/components/success-drawer";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { sendSignupOTP } from "../src/authApi";
 
 // Thin radiating ticks around the paw seal — evokes a stamped kennel-club emblem
 const SEAL_TICKS = Array.from({ length: 14 });
@@ -31,6 +30,13 @@ export default function SignUpScreen() {
   // issue as login.jsx. Drawer now holds this, Continue does the push.
   const [showOtpSentDrawer, setShowOtpSentDrawer] = useState(false);
   const [otpSentMessage, setOtpSentMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
 
   const isReady =
     (signupMethod === "email"
@@ -44,11 +50,13 @@ export default function SignUpScreen() {
       setLoading(true);
 
       if (!name.trim()) {
-        return Alert.alert("Error", "Please enter your name");
+        showError("Please enter your name");
+        return;
       }
 
       if (signupMethod === "email" && !email.trim()) {
-        return Alert.alert("Error", "Please enter your email");
+        showError("Please enter your email");
+        return;
       }
 
       const response = await sendSignupOTP({
@@ -59,10 +67,7 @@ export default function SignUpScreen() {
       setOtpSentMessage(response.data.message || "OTP sent successfully.");
       setShowOtpSentDrawer(true);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message || "Something went wrong",
-      );
+      showError(error?.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -331,6 +336,11 @@ export default function SignUpScreen() {
         onContinue={handleContinueToOtp}
         message={otpSentMessage}
         buttonLabel="Enter code"
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
       />
     </View>
   );

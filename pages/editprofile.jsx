@@ -1,3 +1,5 @@
+import { ErrorDrawer } from "@/components/error-drawer";
+import { SuccessDrawer } from "@/components/success-drawer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -6,7 +8,6 @@ import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useCallback, useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -18,7 +19,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getProfile, updateProfile, uploadProfileImage } from "../src/authApi";
 import { IMAGE_BASE_URL } from "../src/axios";
-
 // TODO: replace with real logged-in user data — GET /me
 // Shape mirrors the `users` table columns exactly
 
@@ -84,6 +84,18 @@ export default function EditProfileScreen() {
   const [activePicker, setActivePicker] = useState(null); // "country" | "state" | null
   const cameraPermission = ImagePicker.requestCameraPermissionsAsync();
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [pendingNavigation, setPendingNavigation] = useState(null); // route to go to after success drawer auto-closes, or null
+
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
+
   const isPhoneUser = form.login_method === "phone";
   const updateField = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -94,7 +106,7 @@ export default function EditProfileScreen() {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert("Permission Required", "Please allow camera access.");
+        showError("Please allow camera access.");
         return;
       }
 
@@ -123,17 +135,17 @@ export default function EditProfileScreen() {
 
       setProfileImage(`${IMAGE_BASE_URL}${imagePath}`);
 
-      Alert.alert("Success", "Profile image uploaded successfully.");
+      setSuccessMessage("Profile image uploaded successfully.");
+      setShowSuccessDrawer(true);
     } catch (error) {
       console.log(error);
-      Alert.alert("Error", "Failed to upload image.");
+      showError("Failed to upload image.");
     }
   };
   const handlePickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
+      showError(
         "Please allow photo library access to update your profile picture.",
       );
       return;
@@ -158,7 +170,7 @@ export default function EditProfileScreen() {
       const normalizedGender = normalizeGender(form.gender);
 
       if (!normalizedGender) {
-        Alert.alert("Please select your gender");
+        showError("Please select your gender.");
         return;
       }
 
@@ -176,14 +188,11 @@ export default function EditProfileScreen() {
         profile_image: profileImage,
       });
 
-      Alert.alert("Success", response.data.message);
-
-      router.replace("/profile");
+      setSuccessMessage(response.data.message);
+      setPendingNavigation("/profile");
+      setShowSuccessDrawer(true);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Something went wrong",
-      );
+      showError(error.response?.data?.message || "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -195,7 +204,7 @@ export default function EditProfileScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert("Permission Required", "Please allow gallery access.");
+        showError("Please allow gallery access.");
         return;
       }
 
@@ -229,10 +238,11 @@ export default function EditProfileScreen() {
 
       setProfileImage(`${IMAGE_BASE_URL}${imagePath}`);
 
-      Alert.alert("Success", "Profile image uploaded successfully.");
+      setSuccessMessage("Profile image uploaded successfully.");
+      setShowSuccessDrawer(true);
     } catch (error) {
       console.log(error);
-      Alert.alert("Error", "Failed to upload image.");
+      showError("Failed to upload image.");
     }
   };
 
@@ -648,6 +658,23 @@ export default function EditProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          if (pendingNavigation) {
+            router.replace(pendingNavigation);
+            setPendingNavigation(null);
+          }
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
+      />
     </SafeAreaView>
   );
 }

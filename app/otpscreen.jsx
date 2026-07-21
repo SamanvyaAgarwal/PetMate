@@ -1,10 +1,9 @@
+import { ErrorDrawer } from "@/components/error-drawer";
+import { SuccessDrawer } from "@/components/success-drawer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
-
-import { SuccessDrawer } from "@/components/success-drawer";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -51,6 +50,13 @@ export default function OtpScreen() {
   const [showVerifiedDrawer, setShowVerifiedDrawer] = useState(false);
   const [verifiedMessage, setVerifiedMessage] = useState("");
   const [postVerifyDestination, setPostVerifyDestination] = useState("/home");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
 
   useEffect(() => {
     if (secondsLeft === 0) return;
@@ -93,10 +99,7 @@ export default function OtpScreen() {
 
       setShowResendDrawer(true);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message || "Failed to resend OTP",
-      );
+      showError(error?.response?.data?.message || "Failed to resend OTP");
     }
   };
 
@@ -108,7 +111,8 @@ export default function OtpScreen() {
       const otp = digits.join("");
 
       if (otp.length !== 6) {
-        return Alert.alert("Error", "Please enter a valid OTP");
+        showError("Please enter a valid OTP");
+        return;
       }
 
       let response;
@@ -143,7 +147,7 @@ export default function OtpScreen() {
       console.log("Response:", error?.response?.data);
       console.log("=========================");
 
-      Alert.alert("Error", error?.response?.data?.message || error.message);
+      showError(error?.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
@@ -332,6 +336,11 @@ export default function OtpScreen() {
         onContinue={handleContinueAfterVerify}
         message={verifiedMessage}
         buttonLabel="Continue"
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
       />
     </View>
   );
