@@ -1,15 +1,17 @@
+import { addHobby } from "@/src/authApi";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { addHobby } from "@/src/authApi";
 
+import { ErrorDrawer } from "@/components/error-drawer";
 import {
   DropdownField,
   FieldLabel,
   OptionPickerModal,
   TextAreaField,
 } from "@/components/form-fields";
+import { SuccessDrawer } from "@/components/success-drawer";
 
 const HOBBY_OPTIONS = [
   "Fetch",
@@ -34,6 +36,15 @@ export function HobbyForm({ petId, onClose, onSuccess }) {
   const [interestLevel, setInterestLevel] = useState(1);
   const [notes, setNotes] = useState("");
   const [showHobbyPicker, setShowHobbyPicker] = useState(false);
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
   const resetForm = () => {
     setHobbyName("");
     setInterestLevel(1);
@@ -43,10 +54,7 @@ export function HobbyForm({ petId, onClose, onSuccess }) {
 
   const handleSave = async () => {
     if (!isValid) {
-      Alert.alert(
-        "Missing info",
-        "Please select a hobby and an interest level."
-      );
+      showError("Please select a hobby and an interest level.");
       return;
     }
 
@@ -62,20 +70,16 @@ export function HobbyForm({ petId, onClose, onSuccess }) {
 
       await addHobby(petId, payload);
 
-      Alert.alert("Success", "Hobby added successfully.");
-
       resetForm();
 
       if (onSuccess) {
         await onSuccess();
       }
 
-      onClose();
+      setSuccessMessage("Hobby added successfully.");
+      setShowSuccessDrawer(true);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Something went wrong."
-      );
+      showError(error.response?.data?.message || "Something went wrong.");
     }
   };
 
@@ -144,6 +148,19 @@ export function HobbyForm({ petId, onClose, onSuccess }) {
           setShowHobbyPicker(false);
         }}
         onClose={() => setShowHobbyPicker(false)}
+      />
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          onClose();
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
       />
     </>
   );

@@ -17,21 +17,23 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import {
+  deleteAllergy,
+  deleteHobby,
   deletePet,
-  getPetById,
-  getVaccines,
   deleteVaccine,
   getAllergies,
-  deleteAllergy,
   getHobbies,
-  deleteHobby,
+  getPetById,
+  getVaccines,
 } from "../src/authApi";
 
 import { BottomDrawer } from "@/components/bottom-drawer";
+import { ErrorDrawer } from "@/components/error-drawer";
 import { AllergyForm } from "@/components/forms/allergy-form";
 import { HobbyForm } from "@/components/forms/hobby-form";
 import { VaccineRecordForm } from "@/components/forms/vaccine-record-form";
 import { WalkForm } from "@/components/forms/walk-form";
+import { SuccessDrawer } from "@/components/success-drawer";
 import { IMAGE_BASE_URL } from "../src/axios";
 
 // Thin radiating ticks around the paw seal — reused from the auth screens
@@ -103,13 +105,30 @@ export default function PetProfileScreen() {
   const [showAllergyMenu, setShowAllergyMenu] = useState(false);
   const [selectedHobby, setSelectedHobby] = useState(null);
   const [showHobbyMenu, setShowHobbyMenu] = useState(false);
-  
+
   const [allergies, setAllergies] = useState([]);
   // Which "Add Record" drawer is open, if any: one of the DRAWER_TITLES
   // keys, or null when every drawer is closed.
   const [openDrawer, setOpenDrawer] = useState(null);
   const [drawerMode, setDrawerMode] = useState("add");
   const insets = useSafeAreaInsets();
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  // Some delete flows need to navigate away after the success drawer closes
+  // (deleting the whole pet), most don't (deleting a single record).
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
+
+  const showSuccess = (msg) => {
+    setSuccessMessage(msg);
+    setShowSuccessDrawer(true);
+  };
 
   const petName = pet?.pet_name || pet?.name || "Pet";
   const petImageUri = pet?.pet_image
@@ -186,21 +205,19 @@ export default function PetProfileScreen() {
             try {
               await deleteVaccine(selectedVaccine.id);
 
-              Alert.alert("Success", "Vaccine deleted successfully.");
-
               setShowVaccineMenu(false);
               setSelectedVaccine(null);
 
               loadVaccines();
+              showSuccess("Vaccine deleted successfully.");
             } catch (error) {
-              Alert.alert(
-                "Error",
-                error.response?.data?.message || "Something went wrong."
+              showError(
+                error.response?.data?.message || "Something went wrong.",
               );
             }
           },
         },
-      ]
+      ],
     );
   };
   const handleDeleteAllergy = () => {
@@ -219,55 +236,48 @@ export default function PetProfileScreen() {
             try {
               await deleteAllergy(selectedAllergy.id);
 
-              Alert.alert("Success", "Allergy deleted successfully.");
-
               setShowAllergyMenu(false);
               setSelectedAllergy(null);
 
               loadAllergies();
+              showSuccess("Allergy deleted successfully.");
             } catch (error) {
-              Alert.alert(
-                "Error",
-                error.response?.data?.message || "Something went wrong."
+              showError(
+                error.response?.data?.message || "Something went wrong.",
               );
             }
           },
         },
-      ]
+      ],
     );
   };
   const handleDeleteHobby = () => {
-    Alert.alert(
-      "Delete Hobby",
-      "Are you sure you want to delete this hobby?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert("Delete Hobby", "Are you sure you want to delete this hobby?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteHobby(selectedHobby.id);
+
+            setShowHobbyMenu(false);
+            setSelectedHobby(null);
+
+            loadHobbies();
+            showSuccess("Hobby deleted successfully.");
+          } catch (error) {
+            Alert.alert(
+              "Error",
+              error.response?.data?.message || "Something went wrong.",
+            );
+          }
         },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteHobby(selectedHobby.id);
-
-              Alert.alert("Success", "Hobby deleted successfully.");
-
-              setShowHobbyMenu(false);
-              setSelectedHobby(null);
-
-              loadHobbies();
-            } catch (error) {
-              Alert.alert(
-                "Error",
-                error.response?.data?.message || "Something went wrong."
-              );
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
   const activeTabData = TABS.find((t) => t.key === activeTab);
 
@@ -292,19 +302,12 @@ export default function PetProfileScreen() {
     try {
       const response = await deletePet(petId);
 
-      Alert.alert("Success", response.data.message, [
-        {
-          text: "OK",
-          onPress: () => router.replace("/home"),
-        },
-      ]);
+      setPendingNavigation("/home");
+      showSuccess(response.data.message);
     } catch (error) {
       console.log(error.response?.data || error);
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Unable to delete pet.",
-      );
+      showError(error.response?.data?.message || "Unable to delete pet.");
     }
   };
   const closeDrawer = () => setOpenDrawer(null);
@@ -559,17 +562,15 @@ export default function PetProfileScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  <Text className="mt-2 text-pine">
-                    Vaccination Date:
-                  </Text>
+                  <Text className="mt-2 text-pine">Vaccination Date:</Text>
 
                   <Text className="text-pine/60">
-                    {new Date(item.vaccination_date).toLocaleDateString("en-GB")}
+                    {new Date(item.vaccination_date).toLocaleDateString(
+                      "en-GB",
+                    )}
                   </Text>
 
-                  <Text className="mt-3 text-pine">
-                    Due Date:
-                  </Text>
+                  <Text className="mt-3 text-pine">Due Date:</Text>
 
                   <Text className="text-pine/60">
                     {item.next_due_date
@@ -601,7 +602,6 @@ export default function PetProfileScreen() {
                   className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
                 >
                   <View className="flex-row items-center justify-between">
-
                     <Text className="text-lg font-bold text-pine">
                       🤧 {item.allergy_name}
                     </Text>
@@ -618,85 +618,84 @@ export default function PetProfileScreen() {
                         color="#1F3D2B"
                       />
                     </TouchableOpacity>
-
                   </View>
                 </View>
               ))}
             </View>
           )
-          ) : activeTab === "hobbies" ? (
-            hobbies.length === 0 ? (
-              <View className="mt-10 items-center px-4 py-10">
-                <Ionicons
-                  name="heart-outline"
-                  size={56}
-                  color="#1F3D2B"
-                  style={{ opacity: 0.2 }}
-                />
-                <Text className="mt-4 text-sm text-pine/40">
-                  No hobby records yet.
-                </Text>
-              </View>
-            ) : (
-              <View className="mt-6 px-4">
-                {hobbies.map((item) => (
-                  <View
-                    key={item.id}
-                    className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <View>
-                        <Text className="text-lg font-bold text-pine">
-                          ❤️ {item.hobby_name}
-                        </Text>
-
-                        <View className="mt-2 flex-row">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Ionicons
-                              key={star}
-                              name={star <= item.rating ? "star" : "star-outline"}
-                              size={18}
-                              color="#D9A441"
-                              style={{ marginRight: 2 }}
-                            />
-                          ))}
-                        </View>
-                      </View>
-
-                      <TouchableOpacity
-                        onPress={() => {
-                          setSelectedHobby(item);
-                          setShowHobbyMenu(true);
-                        }}
-                      >
-                        <Ionicons
-                          name="ellipsis-vertical"
-                          size={20}
-                          color="#1F3D2B"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )
-          ) : (
+        ) : activeTab === "hobbies" ? (
+          hobbies.length === 0 ? (
             <View className="mt-10 items-center px-4 py-10">
               <Ionicons
-                name={activeTabData.icon}
+                name="heart-outline"
                 size={56}
                 color="#1F3D2B"
                 style={{ opacity: 0.2 }}
               />
               <Text className="mt-4 text-sm text-pine/40">
-                No{" "}
-                {activeTabData.key === "medical"
-                  ? "medical history"
-                  : activeTabData.label.toLowerCase()}{" "}
-                records yet.
+                No hobby records yet.
               </Text>
             </View>
-          ) }
+          ) : (
+            <View className="mt-6 px-4">
+              {hobbies.map((item) => (
+                <View
+                  key={item.id}
+                  className="mb-4 rounded-2xl border border-pine/10 bg-white p-4"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View>
+                      <Text className="text-lg font-bold text-pine">
+                        ❤️ {item.hobby_name}
+                      </Text>
+
+                      <View className="mt-2 flex-row">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons
+                            key={star}
+                            name={star <= item.rating ? "star" : "star-outline"}
+                            size={18}
+                            color="#D9A441"
+                            style={{ marginRight: 2 }}
+                          />
+                        ))}
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedHobby(item);
+                        setShowHobbyMenu(true);
+                      }}
+                    >
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={20}
+                        color="#1F3D2B"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )
+        ) : (
+          <View className="mt-10 items-center px-4 py-10">
+            <Ionicons
+              name={activeTabData.icon}
+              size={56}
+              color="#1F3D2B"
+              style={{ opacity: 0.2 }}
+            />
+            <Text className="mt-4 text-sm text-pine/40">
+              No{" "}
+              {activeTabData.key === "medical"
+                ? "medical history"
+                : activeTabData.label.toLowerCase()}{" "}
+              records yet.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* ---------- Fixed Add Record button — hidden on Medical Hx ---------- */}
@@ -775,7 +774,6 @@ export default function PetProfileScreen() {
           onPress={() => setShowVaccineMenu(false)}
         >
           <View className="w-64 rounded-2xl bg-white p-4">
-
             <TouchableOpacity
               className="py-3"
               onPress={() => {
@@ -785,9 +783,7 @@ export default function PetProfileScreen() {
                 setOpenDrawer("vaccines");
               }}
             >
-              <Text className="text-base font-semibold text-pine">
-                ✏️ Edit
-              </Text>
+              <Text className="text-base font-semibold text-pine">✏️ Edit</Text>
             </TouchableOpacity>
 
             <View className="h-px bg-gray-200" />
@@ -802,7 +798,6 @@ export default function PetProfileScreen() {
                 🗑 Delete
               </Text>
             </TouchableOpacity>
-
           </View>
         </Pressable>
       </Modal>
@@ -817,7 +812,6 @@ export default function PetProfileScreen() {
           onPress={() => setShowAllergyMenu(false)}
         >
           <View className="w-64 rounded-2xl bg-white p-4">
-
             <TouchableOpacity
               className="py-3"
               onPress={() => {
@@ -825,9 +819,7 @@ export default function PetProfileScreen() {
                 // We'll add Edit later
               }}
             >
-              <Text className="text-base font-semibold text-pine">
-                ✏️ Edit
-              </Text>
+              <Text className="text-base font-semibold text-pine">✏️ Edit</Text>
             </TouchableOpacity>
 
             <View className="h-px bg-gray-200" />
@@ -842,7 +834,6 @@ export default function PetProfileScreen() {
                 🗑 Delete
               </Text>
             </TouchableOpacity>
-
           </View>
         </Pressable>
       </Modal>
@@ -857,7 +848,6 @@ export default function PetProfileScreen() {
           onPress={() => setShowHobbyMenu(false)}
         >
           <View className="w-64 rounded-2xl bg-white p-4">
-
             <TouchableOpacity
               className="py-3"
               onPress={() => {
@@ -865,9 +855,7 @@ export default function PetProfileScreen() {
                 // We'll add Edit later
               }}
             >
-              <Text className="text-base font-semibold text-pine">
-                ✏️ Edit
-              </Text>
+              <Text className="text-base font-semibold text-pine">✏️ Edit</Text>
             </TouchableOpacity>
 
             <View className="h-px bg-gray-200" />
@@ -882,10 +870,25 @@ export default function PetProfileScreen() {
                 🗑 Delete
               </Text>
             </TouchableOpacity>
-
           </View>
         </Pressable>
       </Modal>
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          if (pendingNavigation) {
+            router.replace(pendingNavigation);
+            setPendingNavigation(null);
+          }
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
+      />
     </View>
   );
 }

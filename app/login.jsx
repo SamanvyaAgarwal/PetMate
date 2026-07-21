@@ -2,10 +2,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 
+import { ErrorDrawer } from "@/components/error-drawer";
 import { SuccessDrawer } from "@/components/success-drawer";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -34,6 +34,13 @@ export default function LoginScreen() {
   // confirmation, and navigation only happens once the user taps Continue.
   const [showOtpSentDrawer, setShowOtpSentDrawer] = useState(false);
   const [otpSentMessage, setOtpSentMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
 
   const isReady =
     loginMethod === "email" ? email.trim().length > 0 : phone.trim().length > 0;
@@ -42,7 +49,8 @@ export default function LoginScreen() {
     if (isLoggingIn) return;
     try {
       if (!email.trim()) {
-        return Alert.alert("Error", "Please enter your email");
+        showError("Please enter your email");
+        return;
       }
       setIsLoggingIn(true);
       const response = await sendLoginOTP({
@@ -53,8 +61,7 @@ export default function LoginScreen() {
       setShowOtpSentDrawer(true);
     } catch (error) {
       console.log("Login error:", error);
-      Alert.alert(
-        "Error",
+      showError(
         error?.response?.data?.message ||
           error?.message ||
           "Something went wrong",
@@ -311,6 +318,11 @@ export default function LoginScreen() {
         onContinue={handleContinueToOtp}
         message={otpSentMessage}
         buttonLabel="Enter code"
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
       />
     </View>
   );

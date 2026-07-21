@@ -1,3 +1,5 @@
+import { ErrorDrawer } from "@/components/error-drawer";
+import { SuccessDrawer } from "@/components/success-drawer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Image } from "expo-image";
@@ -5,7 +7,6 @@ import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,7 +20,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getPetById, updatePet, uploadPetImage } from "../src/authApi";
 import { IMAGE_BASE_URL } from "../src/axios";
-
 // TODO: replace with a real fetch — GET /pets/:petId — to pre-fill this form
 
 const BREEDS = [
@@ -113,14 +113,16 @@ export default function EditPetScreen() {
   const [showBreedPicker, setShowBreedPicker] = useState(false);
   const cameraPermission = ImagePicker.requestCameraPermissionsAsync();
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const pickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "We need access to your photos to set a pet photo.",
-      );
+      setErrorMessage("We need access to your photos to set a pet photo.");
+      setShowErrorDrawer(true);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -137,10 +139,8 @@ export default function EditPetScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "We need camera access to take a pet photo.",
-      );
+      setErrorMessage("We need camera access to take a pet photo.");
+      setShowErrorDrawer(true);
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -165,10 +165,10 @@ export default function EditPetScreen() {
   };
 
   const handleShowRegistrationInfo = () => {
-    Alert.alert(
-      "Registration Number",
+    setErrorMessage(
       "This is your pet's unique PawTrail ID, generated automatically when the profile was first created. It can't be changed.",
     );
+    setShowErrorDrawer(true);
   };
   const loadPet = async () => {
     try {
@@ -228,20 +228,16 @@ export default function EditPetScreen() {
 
       const response = await updatePet(petId, data);
 
-      Alert.alert("Success", response.data.message, [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
+      setSuccessMessage(response.data.message);
+      setShowSuccessDrawer(true);
     } catch (error) {
       console.log(error.response?.data || error);
 
       const message = !error.response
         ? "Network error — check your connection and try again."
         : error.response?.data?.message || "Unable to update pet.";
-
-      Alert.alert("Error", message);
+      setErrorMessage(message);
+      setShowErrorDrawer(true);
     }
   };
 
@@ -630,6 +626,19 @@ export default function EditPetScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          router.back();
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
+      />
     </View>
   );
 }

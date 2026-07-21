@@ -1,3 +1,5 @@
+import { ErrorDrawer } from "@/components/error-drawer";
+import { SuccessDrawer } from "@/components/success-drawer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
@@ -5,7 +7,6 @@ import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import {
-  Alert,
   Image,
   Modal,
   Platform,
@@ -58,6 +59,10 @@ export default function AddPetScreen() {
   const [saving, setSaving] = useState(false);
   const [activePicker, setActivePicker] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const updateField = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -96,16 +101,15 @@ export default function AddPetScreen() {
         pet_image: petImage,
       });
 
-      Alert.alert("Success", response.data.message);
+      setSuccessMessage(response.data.message);
+      setShowSuccessDrawer(true);
 
       router.back();
     } catch (error) {
       console.log(error.response?.data || error);
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Something went wrong",
-      );
+      setErrorMessage(error.response?.data?.message || "Something went wrong");
+      setShowErrorDrawer(true);
     } finally {
       setSaving(false);
     }
@@ -134,7 +138,8 @@ export default function AddPetScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      alert("Permission to access gallery is required.");
+      setErrorMessage("Permission to access gallery is required.");
+      setShowErrorDrawer(true);
       return;
     }
 
@@ -409,6 +414,20 @@ export default function AddPetScreen() {
           </View>
         </View>
       </Modal>
+
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          router.back();
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
+      />
     </SafeAreaView>
   );
 }

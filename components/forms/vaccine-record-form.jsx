@@ -1,16 +1,10 @@
-import * as ImagePicker from "expo-image-picker";
 import { addVaccine, updateVaccine } from "@/src/authApi";
+import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ErrorDrawer } from "@/components/error-drawer";
 import {
   DateField,
   DropdownField,
@@ -18,6 +12,7 @@ import {
   OptionPickerModal,
   TextAreaField,
 } from "@/components/form-fields";
+import { SuccessDrawer } from "@/components/success-drawer";
 
 const VACCINE_OPTIONS = [
   "Rabies",
@@ -48,6 +43,15 @@ export function VaccineRecordForm({
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderDate, setReminderDate] = useState("");
   const [showVaccinePicker, setShowVaccinePicker] = useState(false);
+  const [showSuccessDrawer, setShowSuccessDrawer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const showError = (msg) => {
+    setErrorMessage(msg);
+    setShowErrorDrawer(true);
+  };
 
   useEffect(() => {
     if (mode === "edit" && vaccine) {
@@ -68,10 +72,7 @@ export function VaccineRecordForm({
   const pickImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "We need access to your photos to upload images.",
-      );
+      showError("We need access to your photos to upload images.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -110,42 +111,37 @@ export function VaccineRecordForm({
 
   const handleAddMore = async () => {
     if (!isValid) {
-      Alert.alert(
-        "Missing info",
-        "Please fill in the required fields before adding another record."
+      showError(
+        "Please fill in the required fields before adding another record.",
       );
       return;
     }
 
     try {
       setLoading(true);
-     const payload = {
-  vaccine_name: vaccineName,
-  vaccination_date: formatDateForApi(date),
-  next_due_date: reminderOn
-    ? formatDateForApi(reminderDate)
-    : null,
-  doctor_name: "",
-  hospital_name: "",
-  notes,
-};
+      const payload = {
+        vaccine_name: vaccineName,
+        vaccination_date: formatDateForApi(date),
+        next_due_date: reminderOn ? formatDateForApi(reminderDate) : null,
+        doctor_name: "",
+        hospital_name: "",
+        notes,
+      };
 
       const response = await addVaccine(petId, payload);
-
-      Alert.alert("Success", response.data.message);
 
       resetForm();
 
       if (onSuccess) {
         await onSuccess();
       }
+
+      setSuccessMessage(response.data.message);
+      setShowSuccessDrawer(true);
     } catch (error) {
       console.log(error.response?.data || error);
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Something went wrong."
-      );
+      showError(error.response?.data?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -153,7 +149,7 @@ export function VaccineRecordForm({
 
   const handleProceed = async () => {
     if (!isValid) {
-      Alert.alert("Missing info", "Please fill in the required fields.");
+      showError("Please fill in the required fields.");
       return;
     }
 
@@ -163,9 +159,7 @@ export function VaccineRecordForm({
       const payload = {
         vaccine_name: vaccineName,
         vaccination_date: formatDateForApi(date),
-        next_due_date: reminderOn
-          ? formatDateForApi(reminderDate)
-          : null,
+        next_due_date: reminderOn ? formatDateForApi(reminderDate) : null,
         notes,
         doctor_name: "",
         hospital_name: "",
@@ -182,27 +176,22 @@ export function VaccineRecordForm({
 
       console.log("API Response:", response.data);
 
-      Alert.alert(
-        "Success",
-        mode === "edit"
-          ? "Vaccine updated successfully."
-          : "Vaccine added successfully."
-      );
-
       resetForm();
 
       if (onSuccess) {
         await onSuccess();
       }
 
-      onClose();
+      setSuccessMessage(
+        mode === "edit"
+          ? "Vaccine updated successfully."
+          : "Vaccine added successfully.",
+      );
+      setShowSuccessDrawer(true);
     } catch (error) {
       console.log(error.response?.data || error);
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Something went wrong."
-      );
+      showError(error.response?.data?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -280,11 +269,7 @@ export function VaccineRecordForm({
           className="flex-1 items-center justify-center rounded-2xl border-2 border-mustard py-4"
         >
           <Text className="text-base font-extrabold text-pine">
-            {loading
-              ? "Saving..."
-              : mode === "edit"
-                ? "Update"
-                : "Proceed"}
+            {loading ? "Saving..." : mode === "edit" ? "Update" : "Proceed"}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -294,11 +279,7 @@ export function VaccineRecordForm({
         >
           {/* <Text className="text-base font-extrabold text-pine">Proceed</Text> */}
           <Text className="text-base font-extrabold text-pine">
-            {loading
-              ? "Saving..."
-              : mode === "edit"
-                ? "Update"
-                : "Proceed"}
+            {loading ? "Saving..." : mode === "edit" ? "Update" : "Proceed"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -313,6 +294,19 @@ export function VaccineRecordForm({
           setShowVaccinePicker(false);
         }}
         onClose={() => setShowVaccinePicker(false)}
+      />
+      <SuccessDrawer
+        visible={showSuccessDrawer}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessDrawer(false);
+          onClose();
+        }}
+      />
+      <ErrorDrawer
+        visible={showErrorDrawer}
+        message={errorMessage}
+        onDismiss={() => setShowErrorDrawer(false)}
       />
     </>
   );
