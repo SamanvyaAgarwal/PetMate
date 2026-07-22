@@ -4,156 +4,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getServices } from "../src/authApi";
+import { useEffect, useState } from "react";
 
 // TODO: replace `image` with a real backend-hosted photo URL — GET /categories/:key/services
 // Using picsum.photos placeholder images for now (safe for dev use, not final assets)
-const DEMO_SERVICES = {
-  vet: [
-    {
-      id: "1",
-      title: "General Checkup",
-      description: "Routine health checkup to keep your pet in top shape",
-      icon: "medkit",
-      image: "https://picsum.photos/seed/vet-checkup/200/200",
-    },
-    {
-      id: "2",
-      title: "Vaccination",
-      description: "Core and booster vaccines administered by licensed vets",
-      icon: "shield-checkmark",
-      image: "https://picsum.photos/seed/vet-vaccine/200/200",
-    },
-    {
-      id: "3",
-      title: "Emergency Visit",
-      description: "Urgent care for sudden illness or injury",
-      icon: "alert-circle",
-      image: "https://picsum.photos/seed/vet-emergency/200/200",
-    },
-  ],
-  grooming: [
-    {
-      id: "1",
-      title: "Bath & Brush",
-      description: "Gentle bathing and brushing to keep your pet clean",
-      icon: "water",
-      image: "https://picsum.photos/seed/groom-bath/200/200",
-    },
-    {
-      id: "2",
-      title: "Full Grooming",
-      description: "Complete grooming including bath, haircut, and styling",
-      icon: "cut",
-      image: "https://picsum.photos/seed/groom-full/200/200",
-    },
-    {
-      id: "3",
-      title: "Hair Cutting",
-      description: "Professional hair trimming for your pet",
-      icon: "content-cut",
-      image: "https://picsum.photos/seed/groom-cut/200/200",
-    },
-    {
-      id: "4",
-      title: "Nail Trimming",
-      description: "Safe and precise nail care for comfort and hygiene",
-      icon: "paw",
-      image: "https://picsum.photos/seed/groom-nail/200/200",
-    },
-  ],
-  shop: [
-    {
-      id: "1",
-      title: "Food & Treats",
-      description: "Premium nutrition and tasty treats for every pet",
-      icon: "restaurant",
-      image: "https://picsum.photos/seed/shop-food/200/200",
-    },
-    {
-      id: "2",
-      title: "Toys & Accessories",
-      description: "Fun toys, leashes, collars and more",
-      icon: "basketball",
-      image: "https://picsum.photos/seed/shop-toys/200/200",
-    },
-    {
-      id: "3",
-      title: "Bedding & Comfort",
-      description: "Cozy beds and blankets for a good night's sleep",
-      icon: "bed",
-      image: "https://picsum.photos/seed/shop-bed/200/200",
-    },
-  ],
-  training: [
-    {
-      id: "1",
-      title: "Basic Obedience",
-      description: "Sit, stay, and come — the essentials every pet needs",
-      icon: "school",
-      image: "https://picsum.photos/seed/train-obedience/200/200",
-    },
-    {
-      id: "2",
-      title: "Behavior Correction",
-      description: "Address barking, chewing, and other habits",
-      icon: "construct",
-      image: "https://picsum.photos/seed/train-behavior/200/200",
-    },
-    {
-      id: "3",
-      title: "Puppy Training",
-      description: "Early socialization and foundational training",
-      icon: "happy",
-      image: "https://picsum.photos/seed/train-puppy/200/200",
-    },
-  ],
-  funeral: [
-    {
-      id: "1",
-      title: "Cremation Services",
-      description: "Respectful and dignified cremation for your companion",
-      icon: "flame",
-      image: "https://picsum.photos/seed/funeral-cremation/200/200",
-    },
-    {
-      id: "2",
-      title: "Memorial Keepsakes",
-      description: "Custom keepsakes to remember your pet by",
-      icon: "flower",
-      image: "https://picsum.photos/seed/funeral-keepsake/200/200",
-    },
-    {
-      id: "3",
-      title: "Home Pickup",
-      description: "Compassionate pickup service, available 24/7",
-      icon: "car",
-      image: "https://picsum.photos/seed/funeral-pickup/200/200",
-    },
-  ],
-  ngo: [
-    {
-      id: "1",
-      title: "Adoption Drives",
-      description: "Find loving homes for pets in need",
-      icon: "home",
-      image: "https://picsum.photos/seed/ngo-adoption/200/200",
-    },
-    {
-      id: "2",
-      title: "Donation Programs",
-      description: "Support shelters and rescue operations",
-      icon: "heart",
-      image: "https://picsum.photos/seed/ngo-donation/200/200",
-    },
-    {
-      id: "3",
-      title: "Volunteer Opportunities",
-      description: "Give your time to help animals in your community",
-      icon: "people",
-      image: "https://picsum.photos/seed/ngo-volunteer/200/200",
-    },
-  ],
-};
+
 
 const CATEGORY_META = {
   vet: {
@@ -199,7 +55,36 @@ export default function ServiceListingScreen() {
     badge: "Quality care for your pet",
     icon: "paw",
   };
-  const services = DEMO_SERVICES[category] || [];
+  const [services, setServices] = useState([]);
+
+  const loadServices = async () => {
+    try {
+      const categoryMap = {
+        vet: "Veterinary",
+        grooming: "Grooming",
+        training: "Training",
+        walking: "Walking",
+        boarding: "Boarding",
+      };
+
+      const apiCategory = categoryMap[category];
+
+      const response = await getServices(apiCategory);
+
+      console.log("Services API:", response.data);
+
+      setServices(response.data.data.services);
+    } catch (error) {
+      console.log(
+        "Service Error:",
+        error.response?.data || error
+      );
+    }
+  };
+  useEffect(() => {
+    console.log("Service Screen Loaded");
+    loadServices();
+  }, []);
 
   // Was: navigated straight into /booking. Now routes into a vendors list for
   // the chosen service first — vendor selection is what actually kicks off
@@ -210,7 +95,7 @@ export default function ServiceListingScreen() {
       params: {
         category,
         petId,
-        serviceId: service.id,
+        service_uid: service.service_uid,
         serviceTitle: service.title,
       },
     });

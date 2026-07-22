@@ -99,3 +99,7 @@ export const updateHobby = (id, data) =>
 
 export const deleteHobby = (id) =>
     api.delete(`/hobbies/${id}`);
+export const getServices = (category) =>
+    api.get(`/services?category=${category}`);
+export const getVendors = (service_uid) =>
+    api.get(`/services/${service_uid}/vendors`);
