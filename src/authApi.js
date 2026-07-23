@@ -103,3 +103,10 @@ export const getServices = (category) =>
     api.get(`/services?category=${category}`);
 export const getVendors = (service_uid) =>
     api.get(`/services/${service_uid}/vendors`);
+
+export const getBookingSummary = (params) =>
+    api.get("/bookings/summary", { params });
+
+export const createBooking = (data) => {
+    return api.post("/bookings", data);
+};

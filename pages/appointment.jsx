@@ -60,8 +60,19 @@ export default function AppointmentTimeSlotScreen() {
   // Was: only { category, petId, serviceId } — silently dropped the
   // vendorId/vendorName/serviceTitle that vendors.jsx already sends here,
   // so order-summary.jsx had nothing to show for "Package" / provider name.
-  const { category, petId, serviceId, serviceTitle, vendorId, vendorName } =
-    useLocalSearchParams();
+  const {
+    category,
+    pet_uid,
+    service_uid,
+    serviceTitle,
+    vendor_uid,
+    vendorName,
+  } = useLocalSearchParams();
+
+  const petUid = Array.isArray(pet_uid) ? pet_uid[0] : pet_uid;
+  const serviceUid = Array.isArray(service_uid) ? service_uid[0] : service_uid;
+  const vendorUid = Array.isArray(vendor_uid) ? vendor_uid[0] : vendor_uid;
+
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const iconColor = isDark ? "#FBF3E7" : "#1F3D2B";
@@ -100,13 +111,13 @@ export default function AppointmentTimeSlotScreen() {
       pathname: "/order-summary",
       params: {
         category,
-        petId,
-        serviceId,
+        pet_uid: petUid,
+        service_uid: serviceUid,
+        vendor_uid: vendorUid,
         serviceTitle,
-        vendorId,
         vendorName,
-        date: selectedDate.toISOString(),
-        time: selectedTime,
+        booking_date: selectedDate.toISOString(),
+        booking_time: selectedTime,
       },
     });
   };

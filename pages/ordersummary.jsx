@@ -1,4 +1,7 @@
-import { getPetById } from "@/src/authApi";
+import {
+  getBookingSummary,
+  createBooking,
+} from "@/src/authApi";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useColorScheme } from "nativewind";
@@ -16,26 +19,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // TODO: replace with a real fetch — GET /vendors/:vendorId (business contact card)
-const DEMO_PROVIDER = {
-  business_name: "Demo business",
-  phone: "8638555666",
-  email: "demobusiness@pawheed.com",
-  address: "55, Jaipur, 567775",
-};
+
 
 // TODO: replace with a real fetch — GET /services/:serviceId (title + duration
 // + package name), or read this off whatever vendors.jsx already fetched.
-const DEMO_SERVICE_DETAIL = {
-  durationMinutes: 60,
-  fallbackPackageName: "Handsome groomer",
-};
+
 
 // TODO: replace with a real fetch/computation — GET /services/:serviceId/pricing,
 // ideally computed server-side once vendor + package + coupon are all known.
-const DEMO_PRICING = {
-  serviceFee: 1,
-  platformFee: 1,
-};
+
 
 function calculateAge(dob) {
   if (!dob) return "—";
@@ -70,21 +62,24 @@ function formatDateLabel(iso) {
 export default function OrderSummaryScreen() {
   // Forwarded from appointment-time-slot.jsx
   const {
-    category,
-    petId,
-    serviceId,
-    serviceTitle,
-    vendorId,
-    vendorName,
-    date,
-    time,
+    pet_uid,
+    service_uid,
+    vendor_uid,
+    booking_date,
+    booking_time,
   } = useLocalSearchParams();
+
+  const petUid = Array.isArray(pet_uid) ? pet_uid[0] : pet_uid;
+  const serviceUid = Array.isArray(service_uid) ? service_uid[0] : service_uid;
+  const vendorUid = Array.isArray(vendor_uid) ? vendor_uid[0] : vendor_uid;
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const iconColor = isDark ? "#FBF3E7" : "#1F3D2B";
 
-  const [pet, setPet] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [bookingLoading, setBookingLoading] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -92,21 +87,45 @@ export default function OrderSummaryScreen() {
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [notes, setNotes] = useState("");
 
-  const loadPet = async () => {
+  const loadBookingSummary = async () => {
     try {
-      const response = await getPetById(petId);
-      setPet(response.data.data.pet);
+      const response = await getBookingSummary({
+        pet_uid: petUid,
+        service_uid: serviceUid,
+        vendor_uid: vendorUid,
+        booking_date,
+        booking_time,
+      });
+      setSummary(response.data.data);
+      console.log("Booking Summary:", response.data.data);
     } catch (error) {
       console.log(error.response?.data || error);
+      Alert.alert("Unable to load order summary", error.response?.data?.message || "Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (petId) loadPet();
-  }, [petId]);
+    if (!petUid || !serviceUid || !vendorUid || !booking_date || !booking_time) {
+      setLoading(false);
+      return;
+    }
 
-  const subtotal = DEMO_PRICING.serviceFee + DEMO_PRICING.platformFee;
-  const total = subtotal; // TODO: subtract any applied coupon discount
+    loadBookingSummary();
+  }, [petUid, serviceUid, vendorUid, booking_date, booking_time]);
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-cream dark:bg-pine">
+        <Text className="text-pine dark:text-cream">
+          Loading Order Summary...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  const total = Number(summary?.pricing?.total || 0);
 
   const handleApplyCoupon = () => {
     if (!couponCode.trim()) return;
@@ -117,11 +136,62 @@ export default function OrderSummaryScreen() {
     );
   };
 
-  const handlePay = () => {
-    // TODO: submit the full order payload — pet, vendor, service, date/time,
-    // pricing, applied coupon, pickup/drop-off + contact info, notes — to the
-    // real create-order/payment API, then navigate to a payment/success screen.
-    Alert.alert("Payment", `Proceeding to pay ₹${total.toFixed(2)}`);
+  const handlePay = async () => {
+    console.log("PAY BUTTON CLICKED");
+    if (!pickupAddress.trim()) {
+      Alert.alert("Address Required", "Please enter pickup address.");
+      return;
+    }
+
+    if (!phoneNumber.trim()) {
+      Alert.alert("Phone Required", "Please enter your phone number.");
+      return;
+    }
+
+    try {
+      setBookingLoading(true);
+
+      const response = await createBooking({
+        pet_uid: petUid,
+        service_uid: serviceUid,
+        vendor_uid: vendorUid,
+        booking_date,
+        booking_time,
+        address: pickupAddress,
+        notes,
+      });
+
+      Alert.alert(
+        "Success",
+        "Booking created successfully!",
+        [
+          {
+            text: "OK",
+            onPress: () =>
+              router.replace({
+                pathname: "/booking-success",
+                params: {
+                  booking_uid:
+                    response.data.data.booking.booking_uid,
+                },
+              }),
+          },
+        ]
+      );
+    } catch (error) {
+      console.log("BOOKING ERROR:", error);
+      console.log("STATUS:", error.response?.status);
+      console.log("DATA:", error.response?.data);
+
+      Alert.alert(
+        "Booking Failed",
+        error.response?.data?.message ||
+        error.message ||
+        "Something went wrong."
+      );
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   return (
@@ -168,16 +238,13 @@ export default function OrderSummaryScreen() {
               <View className="absolute -bottom-8 left-10 h-20 w-20 rounded-full bg-clay/10" />
 
               <Text className="text-xl font-extrabold text-clay">
-                {pet?.pet_name || pet?.name || "Your Pet"}
+                {summary?.pet?.pet_name || summary?.pet?.name || "Your Pet"}
               </Text>
               <Text className="mt-1.5 text-[15px] text-pine dark:text-cream">
-                Breed: {pet?.breed || "—"}
+                Breed: {summary?.pet?.breed || "—"}
               </Text>
               <Text className="mt-1 text-[15px] text-pine dark:text-cream">
-                Age: {calculateAge(pet?.dob)}
-              </Text>
-              <Text className="mt-1 text-[15px] text-pine dark:text-cream">
-                Weight: {pet?.weight ? `${pet.weight} kg` : "—"}
+                Type: {summary?.pet?.pet_type || "—"}
               </Text>
             </View>
 
@@ -189,33 +256,33 @@ export default function OrderSummaryScreen() {
                   size={19}
                   color={iconColor}
                 />
-                <Text className="text-base font-bold text-pine dark:text-cream">
-                  Service Provider
-                </Text>
+                <View>
+                  <Text>Service Provider</Text>
+                </View>
               </View>
               <View className="my-3 h-px bg-fog-200 dark:bg-cream/10" />
 
               <ProviderRow
                 label="Business"
-                value={DEMO_PROVIDER.business_name}
+                value={summary?.vendor?.vendor_name}
                 bold
               />
               <ProviderRow
                 icon="call-outline"
                 label="Phone"
-                value={DEMO_PROVIDER.phone}
+                value={summary?.vendor?.phone}
                 iconColor={iconColor}
               />
               <ProviderRow
                 icon="mail-outline"
                 label="Email"
-                value={DEMO_PROVIDER.email}
+                value={summary?.vendor?.email || "—"}
                 iconColor={iconColor}
               />
               <ProviderRow
                 icon="location-outline"
                 label="Address"
-                value={DEMO_PROVIDER.address}
+                value={summary?.vendor?.address}
                 iconColor={iconColor}
                 last
               />
@@ -224,13 +291,13 @@ export default function OrderSummaryScreen() {
             {/* Package / service */}
             <View className="overflow-hidden rounded-2xl border border-fog-200 bg-cream px-5 py-5 dark:border-cream/10 dark:bg-pine">
               <Text className="text-lg font-extrabold text-pine dark:text-cream">
-                {serviceTitle || "Selected Service"}
+                {summary?.service?.title || "Selected Service"}
               </Text>
               <Text className="mt-1.5 text-[15px] font-semibold text-clay">
-                Package: {vendorName || DEMO_SERVICE_DETAIL.fallbackPackageName}
+                Package: {summary?.vendor?.vendor_name || "—"}
               </Text>
               <Text className="mt-1 text-[13px] text-ink/50 dark:text-cream/50">
-                Duration: {DEMO_SERVICE_DETAIL.durationMinutes} minutes
+                Duration: {summary?.pricing?.duration} minutes
               </Text>
             </View>
 
@@ -243,25 +310,32 @@ export default function OrderSummaryScreen() {
 
               <SummaryRow
                 label="Appointment Date"
-                value={formatDateLabel(date)}
+                value={formatDateLabel(summary?.booking?.booking_date)}
                 pill
               />
-              <SummaryRow label="Time Slot" value={time || "—"} pill />
+              <SummaryRow label="Time Slot" value={summary?.booking?.booking_time || "—"} pill />
 
               <View className="my-3 h-px bg-fog-200 dark:bg-cream/10" />
               <Text className="mb-2 text-sm font-semibold text-pine/70 dark:text-cream/70">
                 Price breakdown
               </Text>
 
-              <PriceRow label="Service fee" amount={DEMO_PRICING.serviceFee} />
+              <PriceRow
+                label="Service fee"
+                amount={Number(summary?.pricing?.service_fee || 0)}
+              />
               <PriceRow
                 label="Platform fee"
-                amount={DEMO_PRICING.platformFee}
+                amount={Number(summary?.pricing?.platform_fee || 0)}
               />
               <View className="my-2 h-px bg-fog-200 dark:bg-cream/10" />
-              <PriceRow label="Subtotal" amount={subtotal} />
+              
               <View className="my-2 h-px bg-fog-200 dark:bg-cream/10" />
-              <PriceRow label="Total payable" amount={total} bold />
+              <PriceRow
+                label="Total payable"
+                amount={Number(summary?.pricing?.total || 0)}
+                bold
+              />
 
               {/* Coupons */}
               <View className="mt-4 flex-row items-center justify-between">
@@ -358,10 +432,13 @@ export default function OrderSummaryScreen() {
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={handlePay}
+          disabled={bookingLoading}
           className="items-center rounded-full bg-mustard py-4"
         >
           <Text className="text-base font-bold text-pine">
-            Pay ₹{total.toFixed(2)}
+            {bookingLoading
+              ? "Creating Booking..."
+              : `Pay ₹${total.toFixed(2)}`}
           </Text>
         </TouchableOpacity>
       </View>
@@ -436,7 +513,7 @@ function PriceRow({ label, amount, bold }) {
             : "text-pine/70 dark:text-cream/70"
         }`}
       >
-        ₹{amount.toFixed(2)}
+        ₹{Number(amount || 0).toFixed(2)}
       </Text>
     </View>
   );
